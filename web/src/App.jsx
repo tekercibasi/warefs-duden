@@ -601,15 +601,15 @@ export default function App() {
                 </p>
                 <a
                   className="duden-link-button"
-                  href="https://github.com/tekercibasi/duden.allmendina.de"
+                  href="https://github.com/tekercibasi/warefs-duden"
                   target="_blank"
                   rel="noreferrer"
                 >
                   Zum GitHub-Repo
                 </a>
-                </div>
               </div>
             </div>
+          </div>
           </div>
         ) : null}
         <main className="duden-page">
