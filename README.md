@@ -1,4 +1,4 @@
-# duden.allmendina.de
+# warefs-duden.de
 
 Small personal dictionary app with a React frontend and MongoDB-backed API. The stack is dockerized and intended to be routed through the shared Nginx Proxy Manager on `proxy_net`.
 
@@ -39,3 +39,11 @@ SSL is handled in the NPM UI as requested. Repo: `https://github.com/tekercibasi
 - The API is available under `/api` and is proxied by Vite during development.
 - AI completion requires `OPENAI_API_KEY` in `.env`. Login uses `ADMIN_PASSWORD` and unlocks create/edit/delete/AI.
 - Database persistence: data lives in the named volume `mongo_data`. Do not run `docker compose down -v` unless you intentionally want to delete the database.
+
+## Production security checklist
+- Serve the built frontend (not the Vite dev server) behind TLS, ideally via the shared NPM reverse proxy with enforced HTTPS/HSTS.
+- Set auth cookies with `Secure`, `HttpOnly`, and `SameSite=Strict` (or `Lax`) and enforce CSRF protection on the API (tokens or same-origin + origin checking).
+- Validate and size-limit all entry fields server-side; reject oversized payloads to prevent abuse/DoS.
+- Keep MongoDB bound to internal networks only; never expose it publicly.
+- Run `npm audit --production` (web/api) on deploys and pin upgrades as needed.
+- If you add external embeds, adjust the CSP in `web/index.html` accordingly.
