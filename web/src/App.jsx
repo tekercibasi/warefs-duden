@@ -267,17 +267,13 @@ export default function App() {
       ctx.fillStyle = "#111111";
       ctx.font = "700 22px 'Libre Baskerville', serif";
       const titleX = logoImg ? padding + 170 : padding;
-      ctx.fillText("OG GERMAN MASTERCLASS — Lernkarte", titleX, 56);
-      ctx.font = "700 12px 'Source Sans 3','Segoe UI',sans-serif";
-      const tag = "Übungskarte";
-      const tagWidth = ctx.measureText(tag).width;
-      const qrSize = 88;
-      const qrX = qrImg ? width - padding - qrSize : width - padding - tagWidth;
+      ctx.fillText("OG GERMAN MASTERCLASS", titleX, 56);
+      const qrSize = 72;
+      const qrY = Math.max(8, (84 - qrSize) / 2);
+      const qrX = qrImg ? width - padding - qrSize : width - padding;
       if (qrImg) {
-        ctx.drawImage(qrImg, qrX, 10, qrSize, qrSize);
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
       }
-      const tagX = qrImg ? qrX - 16 - tagWidth : width - padding - tagWidth;
-      ctx.fillText(tag, Math.max(tagX, padding), 56);
 
       let cursorY = 150;
       ctx.font = "700 34px 'Libre Baskerville', serif";
