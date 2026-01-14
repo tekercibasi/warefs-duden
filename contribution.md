@@ -55,5 +55,5 @@ Danke, dass du zu **duden.allmendina.de** beitragen möchtest! Dieses Projekt is
   - Logs (API/Browser) ohne Secrets
 
 ## Lizenz & Danksagung
-- Geplante Veröffentlichung als Open Source (Lizenz bitte ergänzen). Bis dahin: interne Nutzung.
+- Geplante Veröffentlichung als Open Source (Lizenz bitte ergänzen). Repo: https://github.com/tekercibasi/warefs-duden
 - Danke an alle Beitragenden! Jede PR, die UX, Zuverlässigkeit oder Security verbessert, ist willkommen.

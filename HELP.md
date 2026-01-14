@@ -21,8 +21,9 @@ Diese App sammelt persönliche Wörterbucheinträge. Sie prüft dein Lemma auf R
 - **KI:** OpenAI ergänzt nur fehlende Felder und korrigiert Rechtschreibung/Typografie schonende Weise.
 - **Login:** ADMIN_PASSWORD aktiviert Bearbeiten/Löschen/KI.
 - **Infra:** Docker‑Compose (web/api/mongo), Proxy‑Netz `proxy_net` für NPM.
+ - **Repo:** https://github.com/tekercibasi/warefs-duden
 
 ## Development-Hinweise
-- **Husky/Commitlint:** Commit‑Hooks laufen per `npx --no-install commitlint --edit "$1"` (conventional commits). Beim Clone: `npm install` im Repo und `npm run prepare`, falls nötig.
+- **Husky/Commitlint:** Commit‑Hooks laufen per `npx --no-install commitlint --edit "$1"` (conventional commits). Beim Clone: `npm install` im Repo und `npm run prepare`, falls nötig. Repo: https://github.com/tekercibasi/warefs-duden
 - **Start lokal:** `docker compose up -d` im Repo‑Root. Frontend auf Port 80, API auf 4000.
 - **Sicherheit:** `.env` enthält Credentials (ADMIN_PASSWORD, OPENAI_API_KEY, Mongo‑Daten). Nicht einchecken.
