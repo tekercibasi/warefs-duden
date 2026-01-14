@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dudenLogo from "./img/logo_200.png";
 import testimonialImage from "./img/Testimonial.png";
+import qrCode from "./img/WarefsDuden.svg";
 
 const emptyForm = { term: "", definition: "", example: "", synonyms: "" };
 const asText = (value) => (typeof value === "string" ? value : value ? String(value) : "");
@@ -230,7 +231,10 @@ export default function App() {
           img.src = src;
         });
 
-      const logoImg = await loadImage(dudenLogo).catch(() => null);
+      const [logoImg, qrImg] = await Promise.all([
+        loadImage(dudenLogo).catch(() => null),
+        loadImage(qrCode).catch(() => null)
+      ]);
 
       const width = 900;
       const height = 540;
@@ -266,7 +270,14 @@ export default function App() {
       ctx.fillText("OG GERMAN MASTERCLASS — Lernkarte", titleX, 56);
       ctx.font = "700 12px 'Source Sans 3','Segoe UI',sans-serif";
       const tag = "Übungskarte";
-      ctx.fillText(tag, width - padding - ctx.measureText(tag).width, 56);
+      const tagWidth = ctx.measureText(tag).width;
+      const qrSize = 88;
+      const qrX = qrImg ? width - padding - qrSize : width - padding - tagWidth;
+      if (qrImg) {
+        ctx.drawImage(qrImg, qrX, 10, qrSize, qrSize);
+      }
+      const tagX = qrImg ? qrX - 16 - tagWidth : width - padding - tagWidth;
+      ctx.fillText(tag, Math.max(tagX, padding), 56);
 
       let cursorY = 150;
       ctx.font = "700 34px 'Libre Baskerville', serif";
