@@ -234,15 +234,33 @@ body {
 }
 
 .duden-footer {
+  --testimonial-size: clamp(140px, 20vw, 220px);
   margin-top: 32px;
   display: flex;
   justify-content: center;
+  position: relative;
+  width: 100%;
+  align-items: flex-end;
+  padding: 28px clamp(20px, 5vw, 64px);
+  padding-left:  clamp(80px, 2.1vw, 100px);
+  min-height: calc(var(--testimonial-size) + 24px);
+  box-sizing: border-box;
 }
 
 .duden-footer-actions {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.duden-footer-testimonial {
+  position: absolute;
+  left: -30px;
+  bottom: -30px;
+  width: var(--testimonial-size);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.95;
 }
 
 .duden-footer-button {
@@ -474,16 +492,6 @@ body {
   margin: 4px 0 0;
 }
 
-.duden-edit {
-  border: 1px solid #000;
-  background: transparent;
-  padding: 6px 10px;
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
 .duden-entry-actions {
   display: flex;
   gap: 8px;
@@ -552,15 +560,46 @@ body {
   outline-offset: 2px;
 }
 
-.duden-form button {
+.duden-form button,
+.duden-card,
+.duden-edit,
+.duden-logout,
+.duden-secondary,
+.duden-save,
+.duden-overlay-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid #000000;
   background: #000000;
   color: #ffffff;
   padding: 10px 16px;
+  min-height: 42px;
+  border-radius: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.28em;
-  font-size: 10px;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
   cursor: pointer;
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.12s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.duden-form button:hover,
+.duden-card:hover,
+.duden-edit:hover,
+.duden-logout:hover,
+.duden-secondary:hover,
+.duden-save:hover,
+.duden-overlay-close:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
 .duden-save {
@@ -568,26 +607,59 @@ body {
   background: var(--duden-success);
 }
 
-.duden-secondary {
-  border: 1px solid #000;
-  background: transparent;
-  color: #000;
+.duden-secondary,
+.duden-edit,
+.duden-card {
+  background: #ffffff;
+  color: var(--duden-ink);
+  border-color: #000000;
+}
+
+.duden-secondary:hover,
+.duden-edit:hover,
+.duden-card:hover {
+  background: #000000;
+  color: #ffffff;
+}
+
+.duden-card {
+  gap: 10px;
+  padding-inline: 14px;
+}
+
+.duden-card::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 18px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  background: linear-gradient(135deg, currentColor 0%, currentColor 60%, transparent 60%);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.12);
 }
 
 .duden-logout {
-  border: 1px solid var(--duden-danger);
-  background: transparent;
+  background: #ffffff;
+  border-color: var(--duden-danger);
   color: var(--duden-danger);
 }
 
 .duden-logout:hover {
   background: var(--duden-danger);
   color: #fff;
+  box-shadow: 0 10px 24px rgba(163, 32, 23, 0.24);
 }
 
-.duden-form button:disabled {
+.duden-form button:disabled,
+.duden-card:disabled,
+.duden-edit:disabled,
+.duden-logout:disabled,
+.duden-secondary:disabled,
+.duden-save:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .duden-pill {
@@ -616,6 +688,8 @@ body {
   line-height: 1.2;
   font-family: var(--duden-sans);
   font-weight: 600;
+  padding: 8px 12px;
+  min-height: 0;
 }
 
 .duden-ai-login {
