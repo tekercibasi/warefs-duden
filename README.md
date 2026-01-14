@@ -21,7 +21,7 @@ Small personal dictionary app with a React frontend and MongoDB-backed API. The 
 - Forward port: `80`
 - WebSocket upgrade: enabled (Vite HMR)
 
-SSL is handled in the NPM UI as requested. Repo: `https://github.com/tekercibasi/warefs-duden`.
+SSL is handled in the NPM UI as requested. Repo: `https://github.com/tekercibasi/duden.allmendina.de`.
 
 ## How it works (Kurzfassung)
 - **Login:** `ADMIN_PASSWORD` schützt KI, Editieren und Löschen.
