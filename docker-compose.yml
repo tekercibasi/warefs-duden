@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  web:
+    image: node:20-alpine
+    container_name: duden-allmendina-web
+    working_dir: /app
+    command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 80"
+    volumes:
+      - ./web:/app
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "80"
+    networks:
+      - app_net
+      - proxy_net
+
+  api:
+    image: node:20-alpine
+    container_name: duden-allmendina-api
+    working_dir: /app
+    command: sh -lc "npm install && npm run dev"
+    volumes:
+      - ./api:/app
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      MONGO_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@duden-allmendina-mongo:27017/${MONGO_DB_NAME}?authSource=admin
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    expose:
+      - "4000"
+    networks:
+      - app_net
+
+  mongo:
+    image: mongo:7.0
+    container_name: duden-allmendina-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep 1 > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_net
+
+networks:
+  app_net:
+  proxy_net:
+    external: true
+
+volumes:
+  mongo_data:
