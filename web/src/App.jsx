@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import dudenLogo from "./img/duden.svg";
+import dudenLogo from "./img/logo_200.png";
+import testimonialImage from "./img/Testimonial.png";
 
 const emptyForm = { term: "", definition: "", example: "", synonyms: "" };
 const asText = (value) => (typeof value === "string" ? value : value ? String(value) : "");
@@ -33,6 +34,51 @@ const applyLowercaseFixes = (text) => {
     fixed = fixed.replace(pattern, word);
   });
   return fixed;
+};
+
+const sanitizeFilename = (value) => {
+  if (!value) return "karte";
+  return value
+    .normalize("NFKD")
+    .replace(/[^\w\-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase()
+    .slice(0, 48) || "karte";
+};
+
+const wrapText = (ctx, text, maxWidth) => {
+  const normalized = (text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = "";
+  normalized.forEach((word) => {
+    const tentative = current ? `${current} ${word}` : word;
+    if (ctx.measureText(tentative).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = tentative;
+    }
+  });
+  if (current) lines.push(current);
+  return lines.length ? lines : ["—"];
+};
+
+const drawWrappedText = (ctx, text, x, y, maxWidth, lineHeight) => {
+  const segments = (text || "").split(/\n+/).filter(Boolean);
+  const lines = segments.length > 0 ? segments : [text || "—"];
+  let cursor = y;
+  lines.forEach((segment, idx) => {
+    const wrapped = wrapText(ctx, segment, maxWidth);
+    wrapped.forEach((line, lineIndex) => {
+      ctx.fillText(line, x, cursor);
+      cursor += lineHeight;
+    });
+    if (idx < lines.length - 1) {
+      cursor += lineHeight * 0.4;
+    }
+  });
+  return cursor;
 };
 
 export default function App() {
@@ -168,6 +214,105 @@ export default function App() {
       ...current,
       [field]: applyLowercaseFixes(asText(current[field]))
     }));
+  };
+
+  const downloadCard = async (entry) => {
+    try {
+      if (document.fonts?.ready) {
+        await document.fonts.ready.catch(() => null);
+      }
+
+      const loadImage = (src) =>
+        new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+
+      const logoImg = await loadImage(dudenLogo).catch(() => null);
+
+      const width = 900;
+      const height = 540;
+      const padding = 40;
+      const scale = Math.min(2, window.devicePixelRatio || 1);
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "#d6cfc2";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 10, width - 20, height - 20);
+
+      ctx.fillStyle = "#ffcc00";
+      ctx.fillRect(0, 0, width, 92);
+      ctx.fillStyle = "#111111";
+      ctx.fillRect(0, 84, width, 8);
+
+      if (logoImg) {
+        const logoHeight = 52;
+        const ratio = logoImg.width ? logoHeight / logoImg.height : 1;
+        const logoWidth = logoImg.width ? logoImg.width * ratio : 140;
+        ctx.drawImage(logoImg, padding, 24, logoWidth, logoHeight);
+      }
+
+      ctx.fillStyle = "#111111";
+      ctx.font = "700 22px 'Libre Baskerville', serif";
+      const titleX = logoImg ? padding + 170 : padding;
+      ctx.fillText("OG GERMAN MASTERCLASS — Lernkarte", titleX, 56);
+      ctx.font = "700 12px 'Source Sans 3','Segoe UI',sans-serif";
+      const tag = "Übungskarte";
+      ctx.fillText(tag, width - padding - ctx.measureText(tag).width, 56);
+
+      let cursorY = 150;
+      ctx.font = "700 34px 'Libre Baskerville', serif";
+      ctx.fillText(entry.term || "Unbenannt", padding, cursorY);
+      cursorY += 28;
+
+      ctx.font = "600 12px 'Source Sans 3','Segoe UI',sans-serif";
+      ctx.fillStyle = "#4d4d4d";
+      ctx.fillText("Eintrag · Persönliche Notiz", padding, cursorY);
+      cursorY += 28;
+
+      const maxWidth = width - padding * 2;
+      const addSection = (label, content) => {
+        ctx.fillStyle = "#111111";
+        ctx.font = "700 13px 'Source Sans 3','Segoe UI',sans-serif";
+        ctx.fillText(label, padding, cursorY);
+        cursorY += 18;
+        ctx.font = "400 13px 'Source Sans 3','Segoe UI',sans-serif";
+        ctx.fillStyle = "#111111";
+        cursorY = drawWrappedText(ctx, content || "—", padding, cursorY, maxWidth, 20);
+        cursorY += 12;
+      };
+
+      addSection("Bedeutung", entry.definition);
+      if (entry.example) {
+        addSection("Gebrauch", entry.example);
+      }
+      if (entry.synonyms) {
+        addSection("Synonyme", entry.synonyms);
+      }
+
+      ctx.fillStyle = "#4d4d4d";
+      ctx.font = "600 11px 'Source Sans 3','Segoe UI',sans-serif";
+      ctx.fillText("warefs-duden.de · Persönliche Lernkarte", padding, height - 26);
+
+      const filename = `${sanitizeFilename(entry.term)}-karte.png`;
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = filename;
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Karte konnte nicht exportiert werden", err);
+      setError("Karte konnte nicht erstellt werden.");
+      setTimeout(() => setError(""), 3000);
+    }
   };
 
   const submitEntry = async (event) => {
@@ -540,7 +685,7 @@ export default function App() {
             <p className="duden-eyebrow">
               AI-supported really clever edition
             </p>
-            <p className="duden-slogan">Waref's Word Collection</p>
+            <p className="duden-slogan">OG German Masterclass</p>
             <p className="duden-subtitle">
               Für jeden, der die deutsche Sprache ernst nimmt – und damit alles richtig macht. 
             </p>
@@ -663,24 +808,34 @@ export default function App() {
                           <p>{entry.synonyms}</p>
                         </div>
                       ) : null}
-                      {isLoggedIn ? (
-                        <div className="duden-entry-actions">
-                          <button
-                            type="button"
-                            className="duden-edit"
-                            onClick={() => startEdit(entry)}
-                          >
-                            Bearbeiten
-                          </button>
-                          <button
-                            type="button"
-                            className="duden-edit"
-                            onClick={() => deleteEntry(entry)}
-                          >
-                            Löschen
-                          </button>
-                        </div>
-                      ) : null}
+                      <div className="duden-entry-actions">
+                        <button
+                          type="button"
+                          className="duden-card"
+                          onClick={() => downloadCard(entry)}
+                          title="Lernkarte herunterladen"
+                        >
+                          Karte
+                        </button>
+                        {isLoggedIn ? (
+                          <>
+                            <button
+                              type="button"
+                              className="duden-edit"
+                              onClick={() => startEdit(entry)}
+                            >
+                              Bearbeiten
+                            </button>
+                            <button
+                              type="button"
+                              className="duden-edit"
+                              onClick={() => deleteEntry(entry)}
+                            >
+                              Löschen
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
                     </article>
                   ))
                 )}
@@ -890,6 +1045,12 @@ export default function App() {
             ) : null}
           </div>
           <footer className="duden-footer">
+            <img
+              src={testimonialImage}
+              alt="Testimonial"
+              className="duden-footer-testimonial"
+              loading="lazy"
+            />
             <div className="duden-footer-actions">
               <button type="button" className="duden-link-button" onClick={openHelp}>
                 Help
