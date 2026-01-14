@@ -70,3 +70,5 @@ networks:
 
 volumes:
   mongo_data:
+    name: duden-allmendina-de_mongo_data
+    external: true
