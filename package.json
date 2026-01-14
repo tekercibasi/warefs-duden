@@ -1,0 +1,18 @@
+{
+  "name": "duden.allmendina.de",
+  "version": "1.0.0",
+  "description": "Small personal dictionary app with a React frontend and MongoDB-backed API. The stack is dockerized and intended to be routed through the shared Nginx Proxy Manager on `proxy_net`.",
+  "main": "commitlint.config.js",
+  "scripts": {
+    "prepare": "husky",
+    "lint:commits": "commitlint --edit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "husky": "^9.1.7"
+  }
+}
