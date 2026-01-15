@@ -703,11 +703,9 @@ export default function App() {
           const nextArticle = hasNoun
             ? payloadArticle || asText(current.article).trim().toLowerCase()
             : "";
-          const nextTermBase = asText(payload.term) || current.term;
-          const nextTerm = hasNoun ? capitalizeFirst(nextTermBase) : nextTermBase;
           return {
             ...current,
-            term: nextTerm,
+            term: current.term,
             definition: asText(payload.definition) || current.definition,
             example: asText(payload.example) || current.example,
             synonyms: asText(payload.synonyms) || current.synonyms,
