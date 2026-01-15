@@ -17,6 +17,11 @@ const asArray = (value) => {
   if (Array.isArray(value)) return value.filter(Boolean);
   return [value].filter(Boolean);
 };
+const capitalizeFirst = (value) => {
+  if (!value || typeof value !== "string") return value;
+  if (value.length === 0) return value;
+  return `${value[0].toUpperCase()}${value.slice(1)}`;
+};
 const LOWERCASE_HINTS = ["tatsächlich"];
 const PART_LABELS = {
   noun: "Nomen",
@@ -726,9 +731,11 @@ export default function App() {
           const nextArticle = hasNoun
             ? payloadArticle || asText(current.article).trim().toLowerCase()
             : "";
+          const nextTermBase = asText(payload.term) || current.term;
+          const nextTerm = hasNoun ? capitalizeFirst(nextTermBase) : nextTermBase;
           return {
             ...current,
-            term: asText(payload.term) || current.term,
+            term: nextTerm,
             definition: asText(payload.definition) || current.definition,
             example: asText(payload.example) || current.example,
             synonyms: asText(payload.synonyms) || current.synonyms,
