@@ -1282,33 +1282,33 @@ export default function App() {
                                   Situative Synonyme {panel?.count ? `(${panel.count})` : ""}
                                 </span>
                                 <span aria-hidden="true">{isOpen ? "▲" : "▼"}</span>
-                                {isLoggedIn && editorMode ? (
-                                  <div className="duden-ai-panel-actions">
+                              </button>
+                              {isLoggedIn && editorMode ? (
+                                <div className="duden-ai-panel-actions">
+                                  <button
+                                    type="button"
+                                    className="duden-icon-btn"
+                                    onClick={() => requestAiAlternatives(entry)}
+                                    disabled={panel?.status === "loading"}
+                                    title="KI erneut abfragen"
+                                    aria-label="KI erneut abfragen"
+                                  >
+                                    ★
+                                  </button>
+                                  {panel?.count > 0 ? (
                                     <button
                                       type="button"
-                                      className="duden-icon-btn"
-                                      onClick={() => requestAiAlternatives(entry)}
+                                      className="duden-icon-btn duden-danger"
+                                      onClick={() => deleteAllAlternatives(entry)}
                                       disabled={panel?.status === "loading"}
-                                      title="KI erneut abfragen"
-                                      aria-label="KI erneut abfragen"
+                                      title="Alle gespeicherten Synonyme löschen"
+                                      aria-label="Alle gespeicherten Synonyme löschen"
                                     >
-                                      ★
+                                      🗑
                                     </button>
-                                    {panel?.count > 0 ? (
-                                      <button
-                                        type="button"
-                                        className="duden-icon-btn duden-danger"
-                                        onClick={() => deleteAllAlternatives(entry)}
-                                        disabled={panel?.status === "loading"}
-                                        title="Alle gespeicherten Synonyme löschen"
-                                        aria-label="Alle gespeicherten Synonyme löschen"
-                                      >
-                                        🗑
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                ) : null}
-                              </button>
+                                  ) : null}
+                                </div>
+                              ) : null}
                             </div>
                             {panel?.status === "error" ? (
                               <p className="duden-error">{panel?.error}</p>

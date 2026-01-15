@@ -791,6 +791,7 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .duden-ai-toggle {
@@ -907,14 +908,15 @@ body {
 }
 
 .duden-icon-btn.duden-danger {
-  border-color: var(--duden-danger);
-  color: var(--duden-danger);
+  border-color: #d99a8f;
+  color: #b45a4f;
+  background: #fff7f4;
 }
 
 .duden-icon-btn.duden-danger:hover {
-  background: var(--duden-danger);
-  color: #ffffff;
-  border-color: var(--duden-danger);
+  background: #eec3ba;
+  border-color: #d28a7c;
+  color: #6b2b25;
 }
 
 .duden-status {
