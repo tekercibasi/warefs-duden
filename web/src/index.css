@@ -1131,6 +1131,12 @@ body {
   box-shadow: none;
 }
 
+.duden-icon-img {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
 .duden-card.duden-card--icon::before {
   content: "";
   display: block;

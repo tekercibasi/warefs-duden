@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dudenLogo from "./img/logo_200.png";
 import testimonialImage from "./img/Testimonial.png";
 import qrCode from "./img/WarefsDuden.svg";
+import dIcon from "./img/d.svg";
 
 const emptyForm = {
   term: "",
@@ -86,6 +87,12 @@ const displayTerm = (entry) => {
     return `${term}, ${article}`;
   }
   return term;
+};
+
+const dudenLink = (entry) => {
+  const term = asText(entry?.term).trim();
+  if (!term) return "";
+  return `https://www.duden.de/suchen/dudenonline/${encodeURIComponent(term)}`;
 };
 
 const findLowercaseIssues = () => [];
@@ -1228,6 +1235,18 @@ export default function App() {
                             title="Lernkarte herunterladen"
                             aria-label="Lernkarte herunterladen"
                           />
+                          {dudenLink(entry) ? (
+                            <a
+                              className="duden-icon-btn"
+                              href={dudenLink(entry)}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Auf Duden suchen"
+                              aria-label="Auf Duden suchen"
+                            >
+                              <img src={dIcon} alt="" className="duden-icon-img" />
+                            </a>
+                          ) : null}
                           {isLoggedIn && editorMode ? (
                             <>
                               <button
