@@ -242,7 +242,9 @@ export default function App() {
       // Single selection: click toggles the value, otherwise replace with the clicked one
       const next = has ? [] : [value];
       const article = next.includes("noun") ? current.article : "";
-      return { ...current, partOfSpeech: next, article };
+      const nextTerm =
+        next.includes("noun") && current.term ? capitalizeFirst(current.term) : current.term;
+      return { ...current, partOfSpeech: next, article, term: nextTerm };
     });
   };
   const updateArticle = (event) => {
@@ -281,20 +283,6 @@ export default function App() {
       }
 
       return changed ? next : current;
-    });
-  };
-  const applyCapitalizationFromReview = (reviewData) => {
-    const termReview = reviewData?.term;
-    if (!termReview) return;
-    const termSuggestion = asText(termReview.corrected).trim();
-    const hasNoun = asArray(termReview.partOfSpeech)
-      .map((p) => asText(p).trim().toLowerCase())
-      .includes("noun");
-    if (!hasNoun || !termSuggestion) return;
-    setForm((current) => {
-      const currentTerm = asText(current.term);
-      if (currentTerm === termSuggestion) return current;
-      return { ...current, term: termSuggestion };
     });
   };
   const rememberFocus = (field) => () => {
@@ -537,6 +525,16 @@ export default function App() {
   };
 
   const applyReviewSuggestion = (field, value) => {
+    if (field === "term") {
+      const suggestion = asText(value);
+      const hasNoun = asArray(form.partOfSpeech)
+        .map((p) => asText(p).trim().toLowerCase())
+        .includes("noun");
+      const nextTerm = hasNoun ? capitalizeFirst(suggestion) : suggestion;
+      setForm((current) => ({ ...current, term: nextTerm }));
+      setLemmaSuggestions([]);
+      return;
+    }
     setForm((current) => ({ ...current, [field]: value }));
     setReviewResult(null);
   };
@@ -547,8 +545,11 @@ export default function App() {
     lastFocusedField.current = "term";
     setFocusedFieldState("term");
     setLemmaSuggestions([]);
+    const hasNoun = asArray(form.partOfSpeech)
+      .map((p) => asText(p).trim().toLowerCase())
+      .includes("noun");
     setForm({
-      term: suggestion,
+      term: hasNoun ? capitalizeFirst(suggestion) : suggestion,
       definition: "",
       example: "",
       synonyms: "",
@@ -639,7 +640,6 @@ export default function App() {
       if (focusedField === "term" && reviewFieldValue) {
         const reviewData = await reviewFocusedField(focusedField, reviewFieldValue);
         applyMorphologyFromReview(reviewData);
-        applyCapitalizationFromReview(reviewData);
       }
 
       const normalizedPos = asArray(form.partOfSpeech)
