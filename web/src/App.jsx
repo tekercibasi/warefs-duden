@@ -71,14 +71,10 @@ const defaultVisibleSituations = () => AI_SITUATION_META.map((meta) => meta.key)
 const partLabel = (entry) => {
   const parts = asArray(entry?.partOfSpeech).map((p) => p.toLowerCase());
   if (parts.length === 0) return "";
-  const labels = parts
+  return parts
     .map((p) => PART_LABELS[p])
     .filter(Boolean)
     .join(" · ");
-  if (parts.includes("noun") && entry?.article) {
-    return `${entry.article} · ${labels}`;
-  }
-  return labels;
 };
 
 const displayTerm = (entry) => {
