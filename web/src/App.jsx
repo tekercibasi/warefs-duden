@@ -1055,9 +1055,11 @@ export default function App() {
             <p className="duden-eyebrow">
               AI-supported, really clever Edition
             </p>
-            <p className="duden-slogan">OG German Masterclass</p>
+            <p className="duden-slogan">
+              OG German Masterclass: <strong>SITUATIVE SYNONYM EDITION</strong>
+            </p>
             <p className="duden-subtitle">
-              Für jeden, der die deutsche Sprache ernst nimmt – und damit alles richtig macht. 
+              Das Toolkit für jeden, der über den Lemmarand denkt – und damit immer richtig liegt.
             </p>
           </div>
           <div className="duden-brand-actions">

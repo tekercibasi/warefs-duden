@@ -1408,6 +1408,18 @@ body {
     padding-top: 24px;
   }
 
+  .duden-branding {
+    order: 1;
+  }
+
+  .duden-logo-wrap {
+    order: 2;
+  }
+
+  .duden-brand-actions {
+    order: 3;
+  }
+
   .duden-logo {
     position: static;
     transform: none;
