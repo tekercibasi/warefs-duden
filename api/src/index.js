@@ -240,7 +240,7 @@ app.post("/api/entries/spellcheck", async (req, res) => {
             "Für Felder ohne Änderung: corrected = null, suggestions = [].",
             "suggestions ist ein Array von Objekten { from, to, reason }.",
             "partOfSpeech: Array mit null bis n Einträgen aus: noun, verb, adjective, adverb, interjection, particle, conjunction, preposition, phrase.",
-            "article eine der: der, die, das, oder null (nur bei Nomen).",
+            "article: Wenn partOfSpeech ein Nomen enthält, MUSS der beste Artikel (der/die/das) gesetzt werden; sonst null.",
             "Sprache ist immer Deutsch; keine Halluzinationen hinzufügen, Sinn nicht verändern."
           ].join(" ")
         },
