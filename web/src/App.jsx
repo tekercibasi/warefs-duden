@@ -370,6 +370,12 @@ export default function App() {
         await document.fonts.ready.catch(() => null);
       }
 
+      const panel = synonymPanels[entry._id];
+      const visibleSituations = Array.isArray(panel?.visibleSituations)
+        ? panel.visibleSituations
+        : defaultVisibleSituations();
+      const situativeResults = panel?.results || {};
+
       const loadImage = (src) =>
         new Promise((resolve, reject) => {
           const img = new Image();
@@ -453,6 +459,12 @@ export default function App() {
       if (entry.synonyms) {
         addSection("Synonyme", entry.synonyms);
       }
+      AI_SITUATION_META.filter((meta) => visibleSituations.includes(meta.key))
+        .filter((meta) => (situativeResults?.[meta.key] || []).length > 0)
+        .forEach((meta) => {
+          const list = (situativeResults?.[meta.key] || []).join(", ");
+          addSection(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
+        });
 
       ctx.fillStyle = "#4d4d4d";
       ctx.font = "600 11px 'Source Sans 3','Segoe UI',sans-serif";
