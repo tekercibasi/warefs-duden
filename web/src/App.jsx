@@ -407,7 +407,7 @@ export default function App() {
       ctx.fillStyle = "#111111";
       ctx.font = "700 22px 'Libre Baskerville', serif";
       const titleX = logoImg ? padding + 170 : padding;
-      ctx.fillText("OG GERMAN MASTERCLASS: SYNONYM HELD", titleX, 56);
+      ctx.fillText("OG GERMAN MASTERCLASS: SITUATIVE SYNONYM EDITION", titleX, 56);
       const qrSize = 72;
       const qrY = Math.max(8, (84 - qrSize) / 2);
       const qrX = qrImg ? width - padding - qrSize : width - padding;
@@ -423,10 +423,7 @@ export default function App() {
 
       ctx.font = "600 12px 'Source Sans 3','Segoe UI',sans-serif";
       ctx.fillStyle = "#4d4d4d";
-      const posDescriptor = partLabel(entry);
-      const descriptor = posDescriptor
-        ? `Eintrag · Persönliche Notiz · ${posDescriptor}`
-        : "Eintrag · Persönliche Notiz";
+      const descriptor = partLabel(entry) || "Persönliche Notiz";
       ctx.fillText(descriptor, padding, cursorY);
       cursorY += 28;
 
