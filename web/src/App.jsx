@@ -407,7 +407,7 @@ export default function App() {
       ctx.fillStyle = "#111111";
       ctx.font = "700 22px 'Libre Baskerville', serif";
       const titleX = logoImg ? padding + 170 : padding;
-      ctx.fillText("OG GERMAN MASTERCLASS: Situative Synonm Edition", titleX, 56);
+      ctx.fillText("Situative Synonm Edition", titleX, 56);
       const qrSize = 72;
       const qrY = Math.max(8, (84 - qrSize) / 2);
       const qrX = qrImg ? width - padding - qrSize : width - padding;
@@ -1049,7 +1049,7 @@ export default function App() {
               AI-supported, really clever Edition
             </p>
             <p className="duden-slogan">
-              OG German Masterclass: <strong>Situative Synonm Edition</strong>
+              <strong>Situative Synonm Edition</strong>
             </p>
             <p className="duden-subtitle">
               Das Toolkit für jeden, der über den Lemmarand denkt – und damit immer richtig liegt.
