@@ -133,6 +133,7 @@ const drawWrappedText = (ctx, text, x, y, maxWidth, lineHeight) => {
 export default function App() {
   const [entries, setEntries] = useState([]);
   const [form, setForm] = useState(emptyForm);
+  const [lemmaSuggestions, setLemmaSuggestions] = useState([]);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -251,7 +252,11 @@ export default function App() {
   };
 
   const updateForm = (field) => (event) => {
-    setForm((current) => ({ ...current, [field]: event.target.value }));
+    const nextValue = event.target.value;
+    setForm((current) => ({ ...current, [field]: nextValue }));
+    if (field === "term") {
+      setLemmaSuggestions([]);
+    }
   };
   const togglePartOfSpeech = (value) => () => {
     setForm((current) => {
@@ -556,6 +561,26 @@ export default function App() {
     setReviewResult(null);
   };
 
+  const applyLemmaSuggestion = (value) => {
+    const suggestion = asText(value).trim();
+    if (!suggestion) return;
+    lastFocusedField.current = "term";
+    setFocusedFieldState("term");
+    setLemmaSuggestions([]);
+    setForm({
+      term: suggestion,
+      definition: "",
+      example: "",
+      synonyms: "",
+      partOfSpeech: [],
+      article: ""
+    });
+    requestAnimationFrame(() => {
+      termRef.current?.focus();
+      completeWithAi();
+    });
+  };
+
   const deleteEntry = async (entry) => {
     if (!isLoggedIn) {
       setError("Bitte zuerst anmelden, um Einträge zu löschen.");
@@ -595,72 +620,34 @@ export default function App() {
         ? "term"
         : activeElement === definitionRef.current
           ? "definition"
-          : activeElement === exampleRef.current
-            ? "example"
-            : activeElement === synonymsRef.current
-              ? "synonyms"
-              : null;
-    const focusedField = lastFocusedField.current || domFocusedField;
+            : activeElement === exampleRef.current
+              ? "example"
+              : activeElement === synonymsRef.current
+                ? "synonyms"
+                : null;
+    let focusedField = lastFocusedField.current || domFocusedField;
 
     const hasTerm = asText(form.term).trim();
     const hasDefinition = asText(form.definition).trim();
     const hasExample = asText(form.example).trim();
     const hasSynonyms = asText(form.synonyms).trim();
+    if (!focusedField) {
+      focusedField = hasTerm ? "term" : hasDefinition ? "definition" : null;
+    }
+    if (!focusedField || !["term", "definition"].includes(focusedField)) {
+      setAiStatus("error");
+      setAiMessage("KI ist nur für Lemma oder Bedeutung verfügbar.");
+      return;
+    }
     const fieldLabel = (field) => {
       if (field === "term") return "Lemma";
       if (field === "definition") return "Bedeutung";
       if (field === "example") return "Gebrauch";
       return "Synonyme";
     };
-    const fieldsToReplace = focusedField
-      ? ["term", "definition", "example", "synonyms"].filter((field) => field !== focusedField)
-      : ["term", "definition", "example", "synonyms"];
-    const fieldsLabel = fieldsToReplace.map(fieldLabel).join(", ");
-    const shouldConfirm = focusedField
-      ? fieldsToReplace.some((field) => {
-          if (field === "term") return hasTerm;
-          if (field === "definition") return hasDefinition;
-          if (field === "example") return hasExample;
-          return hasSynonyms;
-        })
-      : Boolean(hasTerm || hasDefinition || hasExample || hasSynonyms);
-    if (shouldConfirm) {
-      const confirmCopy = `Ich werde neue Werte für ${fieldsLabel} hinzufügen. Vorhandene Inhalte werden ersetzt.`;
-      if (!window.confirm(confirmCopy)) {
-        return;
-      }
-    }
-
-    const focusTarget = focusedField
-      ? focusedField === "term"
-        ? termRef
-        : focusedField === "definition"
-          ? definitionRef
-          : focusedField === "example"
-            ? exampleRef
-            : synonymsRef
-      : hasTerm
-        ? termRef
-        : hasDefinition
-          ? definitionRef
-          : hasExample
-            ? exampleRef
-            : hasSynonyms
-              ? synonymsRef
-              : null;
-
+    const focusTarget = focusedField === "term" ? termRef : definitionRef;
     if (focusTarget?.current) {
       requestAnimationFrame(() => focusTarget.current?.focus());
-    }
-
-    if (focusedField) {
-      setForm((current) => ({
-        ...current,
-        term: focusedField === "term" ? current.term : "",
-        definition: focusedField === "definition" ? current.definition : "",
-        example: focusedField === "example" ? current.example : "",
-        synonyms: focusedField === "synonyms" ? current.synonyms : ""
-      }));
     }
 
     setAiStatus("loading");
@@ -679,19 +666,20 @@ export default function App() {
         .map((p) => asText(p).toLowerCase().trim())
         .filter(Boolean);
       const normalizedArticle = asText(form.article).trim().toLowerCase();
-      const focusedPayload = focusedField
-        ? {
-            term: focusedField === "term" ? hasTerm || undefined : undefined,
-            definition: focusedField === "definition" ? hasDefinition || undefined : undefined,
-            example: focusedField === "example" ? hasExample || undefined : undefined,
-            synonyms: focusedField === "synonyms" ? hasSynonyms || undefined : undefined
-          }
-        : {
-            term: hasTerm || undefined,
-            definition: hasDefinition || undefined,
-            example: hasExample || undefined,
-            synonyms: hasSynonyms || undefined
-          };
+      const focusedPayload =
+        focusedField === "term"
+          ? {
+              term: hasTerm || undefined,
+              definition: hasDefinition || undefined,
+              example: hasExample || undefined,
+              synonyms: hasSynonyms || undefined
+            }
+          : {
+              term: undefined,
+              definition: hasDefinition || undefined,
+              example: undefined,
+              synonyms: undefined
+            };
       focusedPayload.partOfSpeech = normalizedPos.length ? normalizedPos : undefined;
       focusedPayload.article = normalizedPos.includes("noun") ? normalizedArticle : undefined;
       const response = await fetch("/api/entries/ai-complete", {
@@ -708,20 +696,31 @@ export default function App() {
         throw new Error(payload.error || "KI-Vervollständigung fehlgeschlagen");
       }
 
-      setForm((current) => {
-        const payloadPos = asArray(payload.partOfSpeech)
-          .map((p) => asText(p).trim().toLowerCase())
-          .filter(Boolean);
-        const payloadArticle = asText(payload.article).trim().toLowerCase();
-        const currentPos = asArray(current.partOfSpeech)
-          .map((p) => asText(p).trim().toLowerCase())
-          .filter(Boolean);
-        const nextPos = payloadPos.length ? payloadPos : currentPos;
-        const hasNoun = nextPos.includes("noun");
-        const nextArticle = hasNoun
-          ? payloadArticle || asText(current.article).trim().toLowerCase()
-          : "";
-        if (!focusedField) {
+      if (focusedField === "definition") {
+        const lemma = asText(payload.term).trim();
+        if (lemma) {
+          setLemmaSuggestions([lemma]);
+          setAiStatus("success");
+          setAiMessage("Lemma-Vorschlag verfügbar.");
+        } else {
+          setAiStatus("error");
+          setAiMessage("Kein Lemma-Vorschlag erhalten.");
+        }
+      } else {
+        setLemmaSuggestions([]);
+        setForm((current) => {
+          const payloadPos = asArray(payload.partOfSpeech)
+            .map((p) => asText(p).trim().toLowerCase())
+            .filter(Boolean);
+          const payloadArticle = asText(payload.article).trim().toLowerCase();
+          const currentPos = asArray(current.partOfSpeech)
+            .map((p) => asText(p).trim().toLowerCase())
+            .filter(Boolean);
+          const nextPos = payloadPos.length ? payloadPos : currentPos;
+          const hasNoun = nextPos.includes("noun");
+          const nextArticle = hasNoun
+            ? payloadArticle || asText(current.article).trim().toLowerCase()
+            : "";
           return {
             ...current,
             term: asText(payload.term) || current.term,
@@ -731,23 +730,12 @@ export default function App() {
             partOfSpeech: nextPos,
             article: nextArticle
           };
+        });
+        setAiStatus("success");
+        setAiMessage("Felder wurden ergänzt.");
+        if (focusedField && reviewFieldValue) {
+          await reviewFocusedField(focusedField, reviewFieldValue);
         }
-        return {
-          ...current,
-          term: focusedField === "term" ? current.term : asText(payload.term) ?? "",
-          definition:
-            focusedField === "definition" ? current.definition : asText(payload.definition) ?? "",
-          example: focusedField === "example" ? current.example : asText(payload.example) ?? "",
-          synonyms:
-            focusedField === "synonyms" ? current.synonyms : asText(payload.synonyms) ?? "",
-          partOfSpeech: nextPos,
-          article: nextArticle
-        };
-      });
-      setAiStatus("success");
-      setAiMessage("Felder wurden ergänzt.");
-      if (focusedField && reviewFieldValue) {
-        await reviewFocusedField(focusedField, reviewFieldValue);
       }
     } catch (err) {
       setAiStatus("error");
@@ -761,7 +749,7 @@ export default function App() {
     if (!field) return "Mit KI ergänzen";
     const labelMap = {
       term: "KI: Beschreibung, Gebrauch und Synonyme",
-      definition: "KI: Lemma, Gebrauch und Synonyme",
+      definition: "KI: Lemma-Vorschläge holen",
       example: "KI: Lemma, Beschreibung und Synonyme",
       synonyms: "KI: Lemma, Beschreibung und Gebrauch"
     };
@@ -1059,6 +1047,23 @@ export default function App() {
                           </div>
                         );
                       })()}
+                      {lemmaSuggestions.length > 0 ? (
+                        <div className="duden-lemma-suggestions">
+                          <p className="duden-status">Lemma-Vorschläge:</p>
+                          <div className="duden-pos-pills" role="group" aria-label="Lemma-Vorschläge">
+                            {lemmaSuggestions.map((item, index) => (
+                              <button
+                                key={`lemma-s-${index}`}
+                                type="button"
+                                className="duden-pos-pill"
+                                onClick={() => applyLemmaSuggestion(item)}
+                              >
+                                {item}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </label>
                     <div className="duden-inline">
                       <label className="duden-pos">
