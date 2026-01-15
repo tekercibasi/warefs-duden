@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const fs = require("fs");
+const path = require("path");
 const OpenAI = require("openai");
 const cookieParser = require("cookie-parser");
 const nspell = require("nspell");
@@ -13,9 +15,12 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 const spellReady = (async () => {
   try {
-    const mod = await import("dictionary-de");
-    const dict = mod.default || mod;
-    return nspell(dict);
+    const dictRoot = path.dirname(require.resolve("hunspell-dict-de-de/package.json"));
+    const [aff, dic] = await Promise.all([
+      fs.promises.readFile(path.join(dictRoot, "de-de.aff"), "utf8"),
+      fs.promises.readFile(path.join(dictRoot, "de-de.dic"), "utf8")
+    ]);
+    return nspell(aff, dic);
   } catch (error) {
     console.error("Failed to load dictionary", error);
     return null;
@@ -54,7 +59,7 @@ const entrySchema = new mongoose.Schema(
     synonyms: { type: String, trim: true },
     partOfSpeech: {
       type: String,
-      enum: ["noun", "verb", "adjective", "adverb"],
+      enum: ["noun", "verb", "adjective", "adverb", "interjection", "particle", "conjunction", "preposition", "phrase"],
       required: false
     },
     article: {
@@ -175,82 +180,105 @@ app.post("/api/entries/ai-complete", async (req, res) => {
   });
 });
 
-app.post("/api/entries/ai-review", async (req, res) => {
+app.post("/api/entries/spellcheck", async (req, res) => {
   if (!ADMIN_PASSWORD) {
     res.status(400).json({ error: "AI login is not configured" });
     return;
   }
   requireAuth(req, res, async () => {
-    const { term, definition, example, synonyms } = req.body || {};
-    if (!term && !definition && !example && !synonyms) {
-      res
-        .status(400)
-        .json({ error: "Provide at least term, definition, example, or synonyms" });
-      return;
-    }
-    const spell = await spellReady.catch(() => null);
-    if (!spell) {
-      res.status(500).json({ error: "Spellchecker not available" });
+    if (!openai) {
+      res.status(400).json({ error: "Spellcheck is not configured" });
       return;
     }
 
-    const reviewText = (text, fieldName) => {
-      if (!text || typeof text !== "string") {
-        return { corrected: null, suggestions: [] };
+    const body = req.body || {};
+    const allowedFields = ["term", "definition", "example", "synonyms"];
+    const requestedFields = Array.isArray(body.userFields)
+      ? body.userFields.filter((field) => allowedFields.includes(field))
+      : allowedFields;
+    const userInputMap =
+      body.userInput && typeof body.userInput === "object" ? body.userInput : null;
+    const fieldsToReview = requestedFields.filter((field) => {
+      const value = body[field];
+      if (!value) return false;
+      if (userInputMap) {
+        return Boolean(userInputMap[field]);
       }
-      const suggestions = [];
-      let correctedText = text;
+      return true;
+    });
 
-      // Lemma: einzelnes Wort, bevorzugt kleingeschrieben prüfen
-      if (fieldName === "term") {
-        const word = text.trim();
-        const lowerWord = word.toLowerCase();
-        // Falls großgeschrieben, aber kein Akronym, Kleinschreibung vorschlagen
-        if (
-          word !== lowerWord &&
-          /^[A-ZÄÖÜ][a-zäöüß]+$/.test(word) &&
-          spell.correct(lowerWord)
-        ) {
-          suggestions.push({ from: word, to: lowerWord, reason: "Kleinschreibung" });
-          correctedText = lowerWord;
-        }
-        if (!spell.correct(lowerWord)) {
-          const guess = spell.suggest(lowerWord)[0];
-          if (guess) {
-            suggestions.push({ from: word, to: guess, reason: "Rechtschreibung" });
-            correctedText = guess;
-          }
-        }
-        return {
-          corrected: suggestions.length > 0 ? correctedText : null,
-          suggestions
-        };
-      }
-
-      // Andere Felder: flacher Scan, einfache Wortvorschläge
-      const words = text.match(/[A-Za-zÄÖÜäöüß]+/g) || [];
-      words.forEach((word) => {
-        if (spell.correct(word.toLowerCase())) return;
-        const guess = spell.suggest(word.toLowerCase())[0];
-        if (guess) {
-          suggestions.push({ from: word, to: guess, reason: "Rechtschreibung" });
-          correctedText = correctedText.replace(new RegExp(`\\b${word}\\b`, "g"), guess);
-        }
-      });
-
-      return {
-        corrected: suggestions.length > 0 ? correctedText : null,
-        suggestions
-      };
-    };
+    if (fieldsToReview.length === 0) {
+      res.status(400).json({ error: "Provide at least one user-entered field to review" });
+      return;
+    }
 
     try {
-      res.json({
-        term: reviewText(term, "term"),
-        definition: reviewText(definition, "definition"),
-        example: reviewText(example, "example"),
-        synonyms: reviewText(synonyms, "synonyms")
+      const payload = {};
+      fieldsToReview.forEach((field) => {
+        payload[field] = body[field];
       });
+
+      const messages = [
+        {
+          role: "system",
+          content: [
+            "Du bist ein deutscher Lektor. Prüfe Rechtschreibung und gib Lemma/Artikel, falls es ein Nomen ist.",
+            "Antworte ausschließlich mit JSON. Keine Fließtexte.",
+            "Schema: { term: { corrected, suggestions, lemma, partOfSpeech, article }, definition: { corrected, suggestions }, example: { corrected, suggestions }, synonyms: { corrected, suggestions } }",
+            "Für nicht gelieferte Felder: keinen Schlüssel ausgeben.",
+            "Für Felder ohne Änderung: corrected = null, suggestions = [].",
+            "suggestions ist ein Array von Objekten { from, to, reason }.",
+            "partOfSpeech eine der: noun, verb, adjective, adverb, interjection, particle, conjunction, preposition, phrase, oder null.",
+            "article eine der: der, die, das, oder null (nur bei Nomen).",
+            "Sprache ist immer Deutsch; keine Halluzinationen hinzufügen, Sinn nicht verändern."
+          ].join(" ")
+        },
+        {
+          role: "user",
+          content: JSON.stringify(payload)
+        }
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+        response_format: { type: "json_object" },
+        temperature: 0
+      });
+
+      const raw = completion.choices?.[0]?.message?.content;
+      if (!raw) {
+        throw new Error("Empty response");
+      }
+
+      const parsed = JSON.parse(raw);
+      const result = {};
+      fieldsToReview.forEach((field) => {
+        const value = parsed[field];
+        if (value && typeof value === "object") {
+          result[field] = {
+            corrected:
+              typeof value.corrected === "string" && value.corrected.trim()
+                ? value.corrected
+                : null,
+            suggestions: Array.isArray(value.suggestions) ? value.suggestions : [],
+            lemma:
+              typeof value.lemma === "string" && value.lemma.trim() ? value.lemma.trim() : null,
+            partOfSpeech:
+              typeof value.partOfSpeech === "string" && value.partOfSpeech.trim()
+                ? value.partOfSpeech.trim().toLowerCase()
+                : null,
+            article:
+              typeof value.article === "string" && value.article.trim()
+                ? value.article.trim().toLowerCase()
+                : null
+          };
+        } else {
+          result[field] = { corrected: null, suggestions: [] };
+        }
+      });
+
+      res.json(result);
     } catch (error) {
       console.error("Spell review failed", error);
       res.status(500).json({ error: "Spell review failed" });
@@ -261,7 +289,20 @@ app.post("/api/entries/ai-review", async (req, res) => {
 const normalizePartOfSpeech = (value) => {
   if (!value) return undefined;
   const normalized = String(value).toLowerCase().trim();
-  if (["noun", "verb", "adjective", "adverb"].includes(normalized)) return normalized;
+  if (
+    [
+      "noun",
+      "verb",
+      "adjective",
+      "adverb",
+      "interjection",
+      "particle",
+      "conjunction",
+      "preposition",
+      "phrase"
+    ].includes(normalized)
+  )
+    return normalized;
   return undefined;
 };
 
