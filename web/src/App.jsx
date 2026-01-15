@@ -1056,7 +1056,7 @@ export default function App() {
                           <option value="phrase">Redewendung</option>
                         </select>
                       </label>
-                      {form.partOfSpeech === "noun" ? (
+                      {asArray(form.partOfSpeech).includes("noun") ? (
                         <label>
                           Artikel
                           <select value={form.article} onChange={updateArticle} required>
@@ -1065,6 +1065,18 @@ export default function App() {
                             <option value="die">die</option>
                             <option value="das">das</option>
                           </select>
+                          {(() => {
+                            const suggestedArticle = asText(reviewResult?.term?.article)
+                              .trim()
+                              .toLowerCase();
+                            const currentArticle = asText(form.article).trim().toLowerCase();
+                            if (!suggestedArticle || suggestedArticle === currentArticle) return null;
+                            return (
+                              <p className="duden-status">
+                                Vorschlag: {suggestedArticle.toUpperCase()}
+                              </p>
+                            );
+                          })()}
                         </label>
                       ) : null}
                     </div>
