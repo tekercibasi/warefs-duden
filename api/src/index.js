@@ -58,9 +58,20 @@ const entrySchema = new mongoose.Schema(
     example: { type: String, trim: true },
     synonyms: { type: String, trim: true },
     partOfSpeech: {
-      type: String,
-      enum: ["noun", "verb", "adjective", "adverb", "interjection", "particle", "conjunction", "preposition", "phrase"],
-      required: false
+      type: [String],
+      enum: [
+        "noun",
+        "verb",
+        "adjective",
+        "adverb",
+        "interjection",
+        "particle",
+        "conjunction",
+        "preposition",
+        "phrase"
+      ],
+      required: false,
+      default: undefined
     },
     article: {
       type: String,
@@ -170,7 +181,7 @@ app.post("/api/entries/ai-complete", async (req, res) => {
         definition: parsed.definition ?? definition ?? "",
         example: parsed.example ?? example ?? "",
         synonyms: parsed.synonyms ?? synonyms ?? "",
-        partOfSpeech: parsed.partOfSpeech ?? partOfSpeech ?? "",
+        partOfSpeech: normalizePartOfSpeech(parsed.partOfSpeech ?? partOfSpeech),
         article: parsed.article ?? article ?? ""
       });
     } catch (error) {
@@ -228,7 +239,7 @@ app.post("/api/entries/spellcheck", async (req, res) => {
             "Für nicht gelieferte Felder: keinen Schlüssel ausgeben.",
             "Für Felder ohne Änderung: corrected = null, suggestions = [].",
             "suggestions ist ein Array von Objekten { from, to, reason }.",
-            "partOfSpeech eine der: noun, verb, adjective, adverb, interjection, particle, conjunction, preposition, phrase, oder null.",
+            "partOfSpeech: Array mit null bis n Einträgen aus: noun, verb, adjective, adverb, interjection, particle, conjunction, preposition, phrase.",
             "article eine der: der, die, das, oder null (nur bei Nomen).",
             "Sprache ist immer Deutsch; keine Halluzinationen hinzufügen, Sinn nicht verändern."
           ].join(" ")
@@ -256,6 +267,7 @@ app.post("/api/entries/spellcheck", async (req, res) => {
       fieldsToReview.forEach((field) => {
         const value = parsed[field];
         if (value && typeof value === "object") {
+          const normalizedPos = normalizePartOfSpeech(value.partOfSpeech || value.pos);
           result[field] = {
             corrected:
               typeof value.corrected === "string" && value.corrected.trim()
@@ -264,17 +276,14 @@ app.post("/api/entries/spellcheck", async (req, res) => {
             suggestions: Array.isArray(value.suggestions) ? value.suggestions : [],
             lemma:
               typeof value.lemma === "string" && value.lemma.trim() ? value.lemma.trim() : null,
-            partOfSpeech:
-              typeof value.partOfSpeech === "string" && value.partOfSpeech.trim()
-                ? value.partOfSpeech.trim().toLowerCase()
-                : null,
+            partOfSpeech: normalizedPos.length ? normalizedPos : [],
             article:
               typeof value.article === "string" && value.article.trim()
                 ? value.article.trim().toLowerCase()
                 : null
           };
         } else {
-          result[field] = { corrected: null, suggestions: [] };
+          result[field] = { corrected: null, suggestions: [], partOfSpeech: [], article: null, lemma: null };
         }
       });
 
@@ -286,24 +295,25 @@ app.post("/api/entries/spellcheck", async (req, res) => {
   });
 });
 
+const allowedPos = [
+  "noun",
+  "verb",
+  "adjective",
+  "adverb",
+  "interjection",
+  "particle",
+  "conjunction",
+  "preposition",
+  "phrase"
+];
+
 const normalizePartOfSpeech = (value) => {
-  if (!value) return undefined;
-  const normalized = String(value).toLowerCase().trim();
-  if (
-    [
-      "noun",
-      "verb",
-      "adjective",
-      "adverb",
-      "interjection",
-      "particle",
-      "conjunction",
-      "preposition",
-      "phrase"
-    ].includes(normalized)
-  )
-    return normalized;
-  return undefined;
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : [value];
+  const normalized = list
+    .map((item) => String(item).toLowerCase().trim())
+    .filter((item) => allowedPos.includes(item));
+  return Array.from(new Set(normalized));
 };
 
 const normalizeArticle = (value) => {
@@ -317,7 +327,7 @@ const validateMorphology = (partOfSpeech, article) => {
   const normalizedPos = normalizePartOfSpeech(partOfSpeech);
   const normalizedArticle = normalizeArticle(article);
 
-  if (normalizedPos === "noun") {
+  if (normalizedPos.includes("noun")) {
     if (!normalizedArticle) {
       return { error: "Artikel ist für Nomen erforderlich." };
     }

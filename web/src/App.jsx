@@ -8,10 +8,15 @@ const emptyForm = {
   definition: "",
   example: "",
   synonyms: "",
-  partOfSpeech: "",
+  partOfSpeech: [],
   article: ""
 };
 const asText = (value) => (typeof value === "string" ? value : value ? String(value) : "");
+const asArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return [value].filter(Boolean);
+};
 const LOWERCASE_HINTS = ["tatsächlich"];
 const PART_LABELS = {
   noun: "Nomen",
@@ -26,21 +31,24 @@ const PART_LABELS = {
 };
 
 const partLabel = (entry) => {
-  const key = asText(entry?.partOfSpeech).toLowerCase();
-  const label = PART_LABELS[key];
-  if (!label) return "";
-  if (key === "noun" && entry?.article) {
-    return `${entry.article} · ${label}`;
+  const parts = asArray(entry?.partOfSpeech).map((p) => p.toLowerCase());
+  if (parts.length === 0) return "";
+  const labels = parts
+    .map((p) => PART_LABELS[p])
+    .filter(Boolean)
+    .join(" · ");
+  if (parts.includes("noun") && entry?.article) {
+    return `${entry.article} · ${labels}`;
   }
-  return label;
+  return labels;
 };
 
 const displayTerm = (entry) => {
   const term = asText(entry?.term).trim();
   if (!term) return "";
-  const key = asText(entry?.partOfSpeech).toLowerCase();
+  const key = asArray(entry?.partOfSpeech).map((p) => p.toLowerCase());
   const article = asText(entry?.article).trim();
-  if (key === "noun" && article) {
+  if (key.includes("noun") && article) {
     return `${term}, ${article}`;
   }
   return term;
@@ -245,11 +253,12 @@ export default function App() {
     setForm((current) => ({ ...current, [field]: event.target.value }));
   };
   const updatePartOfSpeech = (event) => {
-    const value = event.target.value;
+    const options = Array.from(event.target.selectedOptions).map((opt) => opt.value);
+    const value = options;
     setForm((current) => ({
       ...current,
       partOfSpeech: value,
-      article: value === "noun" ? current.article : ""
+      article: value.includes("noun") ? current.article : ""
     }));
   };
   const updateArticle = (event) => {
@@ -258,26 +267,30 @@ export default function App() {
   const applyMorphologyFromReview = (reviewData) => {
     const termReview = reviewData?.term;
     if (!termReview) return;
-    const suggestedPos = asText(termReview.partOfSpeech).trim().toLowerCase();
+    const suggestedPos = asArray(termReview.partOfSpeech)
+      .map((p) => asText(p).trim().toLowerCase())
+      .filter(Boolean);
     const suggestedArticle = asText(termReview.article).trim().toLowerCase();
-    if (!suggestedPos && !suggestedArticle) return;
+    if (suggestedPos.length === 0 && !suggestedArticle) return;
 
     setForm((current) => {
-      const currentPos = asText(current.partOfSpeech).trim().toLowerCase();
+      const currentPos = asArray(current.partOfSpeech)
+        .map((p) => asText(p).trim().toLowerCase())
+        .filter(Boolean);
       const currentArticle = asText(current.article).trim().toLowerCase();
       let changed = false;
-      const next = { ...current };
+      const next = { ...current, partOfSpeech: currentPos };
 
-      if (!currentPos && suggestedPos) {
+      if (currentPos.length === 0 && suggestedPos.length > 0) {
         next.partOfSpeech = suggestedPos;
         changed = true;
-        if (suggestedPos !== "noun") {
+        if (!suggestedPos.includes("noun")) {
           next.article = "";
         }
       }
 
-      const targetPos = next.partOfSpeech || suggestedPos;
-      if (targetPos === "noun" && !currentArticle && suggestedArticle) {
+      const targetPos = next.partOfSpeech.length ? next.partOfSpeech : suggestedPos;
+      if (targetPos.includes("noun") && !currentArticle && suggestedArticle) {
         next.article = suggestedArticle;
         changed = true;
       }
@@ -418,9 +431,11 @@ export default function App() {
     setError("");
 
     try {
-      const normalizedPos = asText(form.partOfSpeech).trim().toLowerCase();
+      const normalizedPos = asArray(form.partOfSpeech)
+        .map((p) => asText(p).toLowerCase().trim())
+        .filter(Boolean);
       const normalizedArticle = asText(form.article).trim().toLowerCase();
-      if (normalizedPos === "noun" && !normalizedArticle) {
+      if (normalizedPos.includes("noun") && !normalizedArticle) {
         setError("Bitte Artikel für Nomen auswählen.");
         setStatus("idle");
         return;
@@ -431,8 +446,8 @@ export default function App() {
         definition: asText(form.definition).trim(),
         example: asText(form.example).trim(),
         synonyms: asText(form.synonyms).trim(),
-        partOfSpeech: normalizedPos || undefined,
-        article: normalizedPos === "noun" ? normalizedArticle : undefined
+        partOfSpeech: normalizedPos.length ? normalizedPos : undefined,
+        article: normalizedPos.includes("noun") ? normalizedArticle : undefined
       };
 
       let response;
@@ -473,7 +488,7 @@ export default function App() {
       definition: asText(entry.definition),
       example: asText(entry.example),
       synonyms: asText(entry.synonyms),
-      partOfSpeech: asText(entry.partOfSpeech),
+      partOfSpeech: asArray(entry.partOfSpeech),
       article: asText(entry.article)
     });
     setEditingId(entry._id);
@@ -640,7 +655,9 @@ export default function App() {
         applyMorphologyFromReview(reviewData);
       }
 
-      const normalizedPos = asText(form.partOfSpeech).trim().toLowerCase();
+      const normalizedPos = asArray(form.partOfSpeech)
+        .map((p) => asText(p).toLowerCase().trim())
+        .filter(Boolean);
       const normalizedArticle = asText(form.article).trim().toLowerCase();
       const focusedPayload = focusedField
         ? {
@@ -655,8 +672,8 @@ export default function App() {
             example: hasExample || undefined,
             synonyms: hasSynonyms || undefined
           };
-      focusedPayload.partOfSpeech = normalizedPos || undefined;
-      focusedPayload.article = normalizedPos === "noun" ? normalizedArticle : undefined;
+      focusedPayload.partOfSpeech = normalizedPos.length ? normalizedPos : undefined;
+      focusedPayload.article = normalizedPos.includes("noun") ? normalizedArticle : undefined;
       const response = await fetch("/api/entries/ai-complete", {
         method: "POST",
         headers: {
@@ -672,10 +689,16 @@ export default function App() {
       }
 
       setForm((current) => {
-        const payloadPos = asText(payload.partOfSpeech).trim().toLowerCase();
+        const payloadPos = asArray(payload.partOfSpeech)
+          .map((p) => asText(p).trim().toLowerCase())
+          .filter(Boolean);
         const payloadArticle = asText(payload.article).trim().toLowerCase();
-        const nextPos = payloadPos || asText(current.partOfSpeech).trim().toLowerCase();
-        const nextArticle = nextPos === "noun"
+        const currentPos = asArray(current.partOfSpeech)
+          .map((p) => asText(p).trim().toLowerCase())
+          .filter(Boolean);
+        const nextPos = payloadPos.length ? payloadPos : currentPos;
+        const hasNoun = nextPos.includes("noun");
+        const nextArticle = hasNoun
           ? payloadArticle || asText(current.article).trim().toLowerCase()
           : "";
         if (!focusedField) {
@@ -850,7 +873,7 @@ export default function App() {
                 <div className="duden-help-section">
                   <h3>Qualität &amp; Tests</h3>
                   <p className="duden-help-text">
-                    Letzter Check: 20 Stichproben (Nomen/Verb/Adj/Adv/Interjektion/Partikel/Konjunktion/Präposition/Redewendung) direkt gegen GPT‑4o mit der obigen JSON-Vorgabe. Ergebnis: 19/20 korrekt (95 %); einziger Fehl-Treffer: „schnell“ wurde als Adjektiv statt Adverb eingestuft.
+                    Letzter Check: 50 Stichproben (inkl. Mehrfach-Wortarten wie „schnell“ = Adjektiv+Adverb, Partikeln, Konjunktionen, Redewendungen) direkt gegen GPT‑4o mit JSON-Schema `{terms:[{term, corrected, suggestions, lemma, partOfSpeech[], article}]}`. Ergebnis: 50/50 korrekt (100 %); Mehrfach-Wortarten kamen als Liste zurück.
                   </p>
                 </div>
                 <div className="duden-help-section">
@@ -1020,7 +1043,7 @@ export default function App() {
                     <div className="duden-inline">
                       <label>
                         Wortart
-                        <select value={form.partOfSpeech} onChange={updatePartOfSpeech}>
+                        <select value={form.partOfSpeech} onChange={updatePartOfSpeech} multiple>
                           <option value="">Bitte wählen</option>
                           <option value="noun">Nomen</option>
                           <option value="verb">Verb</option>
