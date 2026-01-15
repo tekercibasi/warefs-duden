@@ -667,7 +667,7 @@ body {
   margin: 0;
   font-family: var(--duden-serif);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 21px;
   line-height: 1.2;
 }
 
@@ -744,14 +744,14 @@ body {
   margin: 4px 0 10px;
   font-family: var(--duden-serif);
   font-style: italic;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--duden-muted);
 }
 
 .duden-entry-block {
-  font-size: 13px;
-  line-height: 1.6;
-  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.65;
+  margin-bottom: 12px;
 }
 
 .duden-entry-block span {
