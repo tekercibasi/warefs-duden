@@ -1045,7 +1045,7 @@ export default function App() {
             <img className="duden-logo" src={dudenLogo} alt="DUDEN" />
           </div>
           <div className="duden-branding">
-            <p className="duden-eyebrow">JETZT: KI-gestützte Zauberformel</p>
+            <p className="duden-eyebrow">JETZT NEU: KI-gestützte Zauberformel</p>
             <p className="duden-slogan">
               <strong>Situative Synonym Edition</strong>
             </p>
