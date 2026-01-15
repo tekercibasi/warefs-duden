@@ -562,6 +562,16 @@ export default function App() {
     });
   };
 
+  const resetAllFields = () => {
+    setForm(emptyForm);
+    setLemmaSuggestions([]);
+    setReviewResult(null);
+    setError("");
+    setAiMessage("");
+    lastFocusedField.current = null;
+    setFocusedFieldState(null);
+  };
+
   const deleteEntry = async (entry) => {
     if (!isLoggedIn) {
       setError("Bitte zuerst anmelden, um Einträge zu löschen.");
@@ -983,15 +993,27 @@ export default function App() {
                     </div>
                     <label>
                       Lemma
-                      <input
-                        type="text"
-                        value={form.term}
-                        onChange={updateForm("term")}
-                        onFocus={rememberFocus("term")}
-                        placeholder="Wort oder Wendung"
-                        required
-                        ref={termRef}
-                      />
+                      <div className="duden-input-wrap">
+                        <input
+                          type="text"
+                          value={form.term}
+                          onChange={updateForm("term")}
+                          onFocus={rememberFocus("term")}
+                          placeholder="Wort oder Wendung"
+                          required
+                          ref={termRef}
+                        />
+                        {form.term ? (
+                          <button
+                            type="button"
+                            className="duden-clear"
+                            onClick={resetAllFields}
+                            aria-label="Felder leeren"
+                          >
+                            ×
+                          </button>
+                        ) : null}
+                      </div>
                       {(() => {
                         const suggestions = reviewResult?.term?.suggestions || [];
                         const corrected = reviewResult?.term?.corrected;
