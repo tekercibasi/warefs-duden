@@ -675,7 +675,7 @@ export default function App() {
           item: payload.item || entry.term,
           results: payload.results || {},
           hasStored: totalCount > 0,
-          count: totalCount,
+          count: Math.max(totalCount, current[entryId]?.count || 0),
           visibleSituations: current[entryId]?.visibleSituations || defaultVisibleSituations()
         }
       }));
