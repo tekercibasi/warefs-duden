@@ -411,7 +411,7 @@ export default function App() {
       ctx.fillStyle = "#111111";
       ctx.font = "700 22px 'Libre Baskerville', serif";
       const titleX = logoImg ? padding + 170 : padding;
-      ctx.fillText("OG GERMAN MASTERCLASS", titleX, 56);
+      ctx.fillText("OG GERMAN MASTERCLASS: SYNONYM HELD", titleX, 56);
       const qrSize = 72;
       const qrY = Math.max(8, (84 - qrSize) / 2);
       const qrX = qrImg ? width - padding - qrSize : width - padding;
@@ -1017,6 +1017,7 @@ export default function App() {
       () => null
     );
     setIsLoggedIn(false);
+    setShowLogin(false);
   };
 
   return (
