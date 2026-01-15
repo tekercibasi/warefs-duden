@@ -1262,8 +1262,7 @@ export default function App() {
                         </div>
                       </div>
                       <p className="duden-entry-type">
-                        Eintrag · Persönliche Notiz
-                        {partLabel(entry) ? ` · ${partLabel(entry)}` : ""}
+                        {partLabel(entry)}
                       </p>
                       <div className="duden-entry-block">
                         <span>Bedeutung:</span>
@@ -1502,27 +1501,7 @@ export default function App() {
                     </label>
                   </div>
                   {asArray(form.partOfSpeech).includes("noun") ? (
-                    <label className="duden-article">
-                      Artikel
-                      <select value={form.article} onChange={updateArticle} required>
-                        <option value="">Bitte wählen</option>
-                        <option value="der">der</option>
-                        <option value="die">die</option>
-                        <option value="das">das</option>
-                      </select>
-                      {(() => {
-                        const suggestedArticle = asText(reviewResult?.term?.article)
-                          .trim()
-                          .toLowerCase();
-                        const currentArticle = asText(form.article).trim().toLowerCase();
-                        if (!suggestedArticle || suggestedArticle === currentArticle) return null;
-                        return (
-                          <p className="duden-status">
-                            Vorschlag: {suggestedArticle.toUpperCase()}
-                          </p>
-                        );
-                      })()}
-                    </label>
+                    <input type="hidden" value={form.article} readOnly />
                   ) : null}
                   <label>
                     Bedeutung
