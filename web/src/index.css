@@ -692,6 +692,34 @@ body {
   text-transform: uppercase;
 }
 
+.duden-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.duden-input-wrap input {
+  flex: 1;
+}
+
+.duden-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--duden-danger);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.duden-clear:hover {
+  color: #7a120e;
+}
+
 .duden-pos {
   display: grid;
   gap: 8px;
