@@ -3,7 +3,7 @@ version: '3.9'
 services:
   web:
     image: node:20-alpine
-    container_name: duden-allmendina-web
+    container_name: warefs-duden-web
     working_dir: /app
     command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 80"
     volumes:
@@ -20,7 +20,7 @@ services:
 
   api:
     image: node:20-alpine
-    container_name: duden-allmendina-api
+    container_name: warefs-duden-api
     working_dir: /app
     command: sh -lc "npm install && npm run dev"
     volumes:
@@ -28,7 +28,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: 4000
-      MONGO_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@duden-allmendina-mongo:27017/${MONGO_DB_NAME}?authSource=admin
+      MONGO_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/${MONGO_DB_NAME}?authSource=admin
       CORS_ORIGIN: ${CORS_ORIGIN}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
@@ -47,7 +47,7 @@ services:
 
   mongo:
     image: mongo:7.0
-    container_name: duden-allmendina-mongo
+    container_name: warefs-duden-mongo
     restart: unless-stopped
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}

@@ -17,7 +17,7 @@ Small personal dictionary app with a React frontend and MongoDB-backed API. The 
 
 ## NPM / proxy routing
 - Network: `proxy_net` (external)
-- Forward host: `duden-allmendina-web`
+- Forward host: `warefs-duden-web`
 - Forward port: `80`
 - WebSocket upgrade: enabled (Vite HMR)
 
