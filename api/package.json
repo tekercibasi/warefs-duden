@@ -7,10 +7,11 @@
     "start": "node src/index.js"
   },
   "dependencies": {
+    "@cspell/dict-de-de": "^4.1.2",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "dictionary-de": "^3.0.0",
     "express": "^4.19.2",
+    "hunspell-dict-de-de": "^0.1.0",
     "mongoose": "^8.5.1",
     "nspell": "^2.1.5",
     "openai": "^4.77.4"
