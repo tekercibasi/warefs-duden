@@ -371,6 +371,11 @@ export default function App() {
       }
 
       setError("");
+      // Reset situative status for this entry
+      setSynonymPanels((current) => ({
+        ...current,
+        [entry._id]: { ...(current[entry._id] || {}), statusMessage: "" }
+      }));
 
       const panel = synonymPanels[entry._id];
       const visibleSituations = Array.isArray(panel?.visibleSituations)
@@ -478,9 +483,20 @@ export default function App() {
           return sum + estimateSectionHeight(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
         }, 0);
         if (neededSpace > availableSpace) {
-          setError("Zu viele situative Synonyme für die Karte. Bitte Situationen filtern und erneut versuchen.");
+          setSynonymPanels((current) => ({
+            ...current,
+            [entry._id]: {
+              ...(current[entry._id] || {}),
+              statusMessage:
+                "Zu viele situative Synonyme für die Karte. Bitte Situationen filtern und erneut versuchen."
+            }
+          }));
           return;
         }
+        setSynonymPanels((current) => ({
+          ...current,
+          [entry._id]: { ...(current[entry._id] || {}), statusMessage: "Situative Synonyme passen jetzt auf die Karte." }
+        }));
         situativeItems.forEach((meta) => {
           const list = (situativeResults?.[meta.key] || []).join(" · ");
           addSection(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
@@ -802,13 +818,14 @@ export default function App() {
       const has = currentList.includes(key);
       const next = has ? currentList.filter((item) => item !== key) : [...currentList, key];
 
+      let statusMessage = panel.statusMessage || "";
       // Direkt nach dem Toggle prüfen, ob die Karte wieder passt
       if (panel?.results) {
         const situativeItems = AI_SITUATION_META.filter((meta) => next.includes(meta.key)).filter(
           (meta) => (panel.results?.[meta.key] || []).length > 0
         );
         if (situativeItems.length === 0) {
-          setError("");
+          statusMessage = "";
         } else {
           const width = 900;
           const padding = 40;
@@ -826,11 +843,10 @@ export default function App() {
             return sum + estimateSectionHeight(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
           }, 0);
           const availableSpace = 540 - 150;
-          if (neededSpace <= availableSpace) {
-            setError("Situative Synonyme passen jetzt auf die Karte.");
-          } else {
-            setError("Zu viele situative Synonyme für die Karte. Bitte weiter filtern.");
-          }
+          statusMessage =
+            neededSpace <= availableSpace
+              ? "Situative Synonyme passen jetzt auf die Karte."
+              : "Zu viele situative Synonyme für die Karte. Bitte weiter filtern.";
         }
       }
 
@@ -838,7 +854,8 @@ export default function App() {
         ...current,
         [entryId]: {
           ...panel,
-          visibleSituations: next
+          visibleSituations: next,
+          statusMessage
         }
       };
     });
@@ -1362,12 +1379,7 @@ export default function App() {
                     const visibleSituations = Array.isArray(panel.visibleSituations)
                       ? panel.visibleSituations
                       : defaultVisibleSituations();
-                    const synStatusMessage =
-                      isOpen &&
-                      error &&
-                      (error.includes("situative Synonyme") || error.includes("Synonyme passen"))
-                        ? error
-                        : "";
+                    const synStatusMessage = isOpen ? panel?.statusMessage || "" : "";
                     return (
                       <div
                         className="duden-ai-panel"
