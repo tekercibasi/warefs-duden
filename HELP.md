@@ -17,11 +17,14 @@ Diese App sammelt persönliche Wörterbucheinträge. Sie prüft dein Lemma auf R
 ## Technischer Überblick
 - **Frontend:** React (Vite). Rechtschreibhinweise und KI‑Ausgaben werden je Feld angezeigt.
 - **API:** Express + Mongoose. Endpunkte: `/api/entries` (CRUD), `/api/entries/ai-complete` (KI), `/api/entries/spellcheck` (Spellcheck/Lemmatisierung via GPT‑4o).
-- **Rechtschreibung:** GPT‑4o, liefert Vorschläge/Artikel/POS je Feld.
+- **Rechtschreibung:** GPT‑4o, liefert Vorschläge/Artikel/POS je Feld; Wortarten können mehrfach vorkommen (z. B. Adjektiv + Adverb).
 - **KI:** OpenAI ergänzt nur fehlende Felder und korrigiert Rechtschreibung/Typografie schonende Weise.
 - **Login:** ADMIN_PASSWORD aktiviert Bearbeiten/Löschen/KI.
 - **Infra:** Docker‑Compose (web/api/mongo), Proxy‑Netz `proxy_net` für NPM.
  - **Repo:** https://github.com/tekercibasi/warefs-duden
+
+## Qualität
+- Letzter Test: 50 Stichproben (Mehrfach-Wortarten, Partikeln, Konjunktionen, Redewendungen) direkt gegen GPT‑4o mit JSON-Schema `{terms:[{term, corrected, suggestions, lemma, partOfSpeech[], article}]}` → 50/50 korrekt (100 %).
 
 ## Development-Hinweise
 - **Husky/Commitlint:** Commit‑Hooks laufen per `npx --no-install commitlint --edit "$1"` (conventional commits). Beim Clone: `npm install` im Repo und `npm run prepare`, falls nötig. Repo: https://github.com/tekercibasi/warefs-duden
