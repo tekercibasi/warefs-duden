@@ -478,8 +478,8 @@ body {
 
 .duden-content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 40px;
   align-items: start;
 }
 
@@ -1381,10 +1381,6 @@ body {
 }
 
 @media (max-width: 980px) {
-  .duden-content {
-    grid-template-columns: 1fr;
-  }
-
   .duden-brandbar {
     flex-direction: column;
     align-items: center;
@@ -1400,6 +1396,11 @@ body {
     align-items: center;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .duden-content {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 }
 
