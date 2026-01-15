@@ -545,7 +545,8 @@ body {
 }
 
 .duden-form input,
-.duden-form textarea {
+.duden-form textarea,
+.duden-form select {
   border: 1px solid #c2b9ad;
   background: transparent;
   padding: 8px 10px;
@@ -555,9 +556,29 @@ body {
 }
 
 .duden-form input:focus,
-.duden-form textarea:focus {
+.duden-form textarea:focus,
+.duden-form select:focus {
   outline: 2px solid rgba(0, 0, 0, 0.3);
   outline-offset: 2px;
+}
+
+.duden-form select {
+  height: 36px;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #000 50%), linear-gradient(135deg, #000 50%, transparent 50%);
+  background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.duden-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.duden-inline label {
+  flex: 1 1 180px;
 }
 
 .duden-form button,

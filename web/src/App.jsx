@@ -3,9 +3,43 @@ import dudenLogo from "./img/logo_200.png";
 import testimonialImage from "./img/Testimonial.png";
 import qrCode from "./img/WarefsDuden.svg";
 
-const emptyForm = { term: "", definition: "", example: "", synonyms: "" };
+const emptyForm = {
+  term: "",
+  definition: "",
+  example: "",
+  synonyms: "",
+  partOfSpeech: "",
+  article: ""
+};
 const asText = (value) => (typeof value === "string" ? value : value ? String(value) : "");
 const LOWERCASE_HINTS = ["tatsächlich"];
+const PART_LABELS = {
+  noun: "Nomen",
+  verb: "Verb",
+  adjective: "Adjektiv",
+  adverb: "Adverb"
+};
+
+const partLabel = (entry) => {
+  const key = asText(entry?.partOfSpeech).toLowerCase();
+  const label = PART_LABELS[key];
+  if (!label) return "";
+  if (key === "noun" && entry?.article) {
+    return `${entry.article} · ${label}`;
+  }
+  return label;
+};
+
+const displayTerm = (entry) => {
+  const term = asText(entry?.term).trim();
+  if (!term) return "";
+  const key = asText(entry?.partOfSpeech).toLowerCase();
+  const article = asText(entry?.article).trim();
+  if (key === "noun" && article) {
+    return `${article} ${term}`;
+  }
+  return term;
+};
 
 const findLowercaseIssues = (text) => {
   if (!text) return [];
@@ -205,6 +239,17 @@ export default function App() {
   const updateForm = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
   };
+  const updatePartOfSpeech = (event) => {
+    const value = event.target.value;
+    setForm((current) => ({
+      ...current,
+      partOfSpeech: value,
+      article: value === "noun" ? current.article : ""
+    }));
+  };
+  const updateArticle = (event) => {
+    setForm((current) => ({ ...current, article: event.target.value }));
+  };
   const rememberFocus = (field) => () => {
     lastFocusedField.current = field;
     setFocusedFieldState(field);
@@ -276,13 +321,18 @@ export default function App() {
       }
 
       let cursorY = 150;
+      const cardTerm = displayTerm(entry) || "Unbenannt";
       ctx.font = "700 34px 'Libre Baskerville', serif";
-      ctx.fillText(entry.term || "Unbenannt", padding, cursorY);
+      ctx.fillText(cardTerm, padding, cursorY);
       cursorY += 28;
 
       ctx.font = "600 12px 'Source Sans 3','Segoe UI',sans-serif";
       ctx.fillStyle = "#4d4d4d";
-      ctx.fillText("Eintrag · Persönliche Notiz", padding, cursorY);
+      const posDescriptor = partLabel(entry);
+      const descriptor = posDescriptor
+        ? `Eintrag · Persönliche Notiz · ${posDescriptor}`
+        : "Eintrag · Persönliche Notiz";
+      ctx.fillText(descriptor, padding, cursorY);
       cursorY += 28;
 
       const maxWidth = width - padding * 2;
@@ -333,11 +383,21 @@ export default function App() {
     setError("");
 
     try {
+      const normalizedPos = asText(form.partOfSpeech).trim().toLowerCase();
+      const normalizedArticle = asText(form.article).trim().toLowerCase();
+      if (normalizedPos === "noun" && !normalizedArticle) {
+        setError("Bitte Artikel für Nomen auswählen.");
+        setStatus("idle");
+        return;
+      }
+
       const payload = {
         term: asText(form.term).trim(),
         definition: asText(form.definition).trim(),
         example: asText(form.example).trim(),
-        synonyms: asText(form.synonyms).trim()
+        synonyms: asText(form.synonyms).trim(),
+        partOfSpeech: normalizedPos || undefined,
+        article: normalizedPos === "noun" ? normalizedArticle : undefined
       };
 
       let response;
@@ -377,7 +437,9 @@ export default function App() {
       term: asText(entry.term),
       definition: asText(entry.definition),
       example: asText(entry.example),
-      synonyms: asText(entry.synonyms)
+      synonyms: asText(entry.synonyms),
+      partOfSpeech: asText(entry.partOfSpeech),
+      article: asText(entry.article)
     });
     setEditingId(entry._id);
     requestAnimationFrame(() => {
@@ -554,6 +616,8 @@ export default function App() {
         }
       }
 
+      const normalizedPos = asText(form.partOfSpeech).trim().toLowerCase();
+      const normalizedArticle = asText(form.article).trim().toLowerCase();
       const focusedPayload = focusedField
         ? {
             term: focusedField === "term" ? hasTerm || undefined : undefined,
@@ -567,6 +631,8 @@ export default function App() {
             example: hasExample || undefined,
             synonyms: hasSynonyms || undefined
           };
+      focusedPayload.partOfSpeech = normalizedPos || undefined;
+      focusedPayload.article = normalizedPos === "noun" ? normalizedArticle : undefined;
       const response = await fetch("/api/entries/ai-complete", {
         method: "POST",
         headers: {
@@ -582,21 +648,33 @@ export default function App() {
       }
 
       setForm((current) => {
+        const payloadPos = asText(payload.partOfSpeech).trim().toLowerCase();
+        const payloadArticle = asText(payload.article).trim().toLowerCase();
+        const nextPos = payloadPos || asText(current.partOfSpeech).trim().toLowerCase();
+        const nextArticle = nextPos === "noun"
+          ? payloadArticle || asText(current.article).trim().toLowerCase()
+          : "";
         if (!focusedField) {
           return {
+            ...current,
             term: asText(payload.term) || current.term,
             definition: asText(payload.definition) || current.definition,
             example: asText(payload.example) || current.example,
-            synonyms: asText(payload.synonyms) || current.synonyms
+            synonyms: asText(payload.synonyms) || current.synonyms,
+            partOfSpeech: nextPos,
+            article: nextArticle
           };
         }
         return {
+          ...current,
           term: focusedField === "term" ? current.term : asText(payload.term) ?? "",
           definition:
             focusedField === "definition" ? current.definition : asText(payload.definition) ?? "",
           example: focusedField === "example" ? current.example : asText(payload.example) ?? "",
           synonyms:
-            focusedField === "synonyms" ? current.synonyms : asText(payload.synonyms) ?? ""
+            focusedField === "synonyms" ? current.synonyms : asText(payload.synonyms) ?? "",
+          partOfSpeech: nextPos,
+          article: nextArticle
         };
       });
       setAiStatus("success");
@@ -690,7 +768,7 @@ export default function App() {
           </div>
           <div className="duden-branding">
             <p className="duden-eyebrow">
-              AI-supported really clever edition
+              AI-supported, really clever Edition
             </p>
             <p className="duden-slogan">OG German Masterclass</p>
             <p className="duden-subtitle">
@@ -797,8 +875,11 @@ export default function App() {
                       key={entry._id}
                       style={{ animationDelay: `${index * 70}ms` }}
                     >
-                      <h3>{entry.term}</h3>
-                      <p className="duden-entry-type">Eintrag · Persönliche Notiz</p>
+                      <h3>{displayTerm(entry)}</h3>
+                      <p className="duden-entry-type">
+                        Eintrag · Persönliche Notiz
+                        {partLabel(entry) ? ` · ${partLabel(entry)}` : ""}
+                      </p>
                       <div className="duden-entry-block">
                         <span>Bedeutung:</span>
                         <p>{entry.definition}</p>
@@ -906,6 +987,29 @@ export default function App() {
                         );
                       })()}
                     </label>
+                    <div className="duden-inline">
+                      <label>
+                        Wortart
+                        <select value={form.partOfSpeech} onChange={updatePartOfSpeech}>
+                          <option value="">Bitte wählen</option>
+                          <option value="noun">Nomen</option>
+                          <option value="verb">Verb</option>
+                          <option value="adjective">Adjektiv</option>
+                          <option value="adverb">Adverb</option>
+                        </select>
+                      </label>
+                      {form.partOfSpeech === "noun" ? (
+                        <label>
+                          Artikel
+                          <select value={form.article} onChange={updateArticle} required>
+                            <option value="">Bitte wählen</option>
+                            <option value="der">der</option>
+                            <option value="die">die</option>
+                            <option value="das">das</option>
+                          </select>
+                        </label>
+                      ) : null}
+                    </div>
                     <label>
                       Bedeutung
                       <textarea
