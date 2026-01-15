@@ -7,7 +7,7 @@ export default defineConfig({
     host: true,
     port: 80,
     strictPort: true,
-    allowedHosts: ["duden.allmendina.de","warefs-duden.de","www.warefs-duden.de"],
+    allowedHosts: ["warefs-duden.de","www.warefs-duden.de"],
     watch: {
       usePolling: true,
       interval: 750

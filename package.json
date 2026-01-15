@@ -1,5 +1,5 @@
 {
-  "name": "duden.allmendina.de",
+  "name": "warefs-duden",
   "version": "1.0.0",
   "description": "Small personal dictionary app with a React frontend and MongoDB-backed API. The stack is dockerized and intended to be routed through the shared Nginx Proxy Manager on `proxy_net`.",
   "main": "commitlint.config.js",
