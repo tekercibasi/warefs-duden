@@ -873,7 +873,7 @@ export default function App() {
                 <div className="duden-help-section">
                   <h3>Qualität &amp; Tests</h3>
                   <p className="duden-help-text">
-                    Letzter Check: 50 Stichproben (inkl. Mehrfach-Wortarten wie „schnell“ = Adjektiv+Adverb, Partikeln, Konjunktionen, Redewendungen) direkt gegen GPT‑4o mit JSON-Schema `{terms:[{term, corrected, suggestions, lemma, partOfSpeech[], article}]}`. Ergebnis: 50/50 korrekt (100 %); Mehrfach-Wortarten kamen als Liste zurück.
+                    Letzter Check: 50 Stichproben (inkl. Mehrfach-Wortarten wie „schnell“ = Adjektiv+Adverb, Partikeln, Konjunktionen, Redewendungen) direkt gegen GPT‑4o mit JSON-Schema <code>{'{terms:[{term, corrected, suggestions, lemma, partOfSpeech[], article}]}'}</code>. Ergebnis: 50/50 korrekt (100 %); Mehrfach-Wortarten kamen als Liste zurück.
                   </p>
                 </div>
                 <div className="duden-help-section">
