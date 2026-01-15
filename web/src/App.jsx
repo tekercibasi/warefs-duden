@@ -441,6 +441,14 @@ export default function App() {
       cursorY += 28;
 
       const maxWidth = width - padding * 2;
+      const estimateSectionHeight = (label, content) => {
+        const labelHeight = 18;
+        ctx.font = "400 13px 'Source Sans 3','Segoe UI',sans-serif";
+        const lines = wrapText(ctx, content || "—", maxWidth);
+        const contentHeight = lines.length * 20;
+        return labelHeight + contentHeight + 12;
+      };
+
       const addSection = (label, content) => {
         ctx.fillStyle = "#111111";
         ctx.font = "700 13px 'Source Sans 3','Segoe UI',sans-serif";
@@ -459,12 +467,23 @@ export default function App() {
       if (entry.synonyms) {
         addSection("Synonyme", entry.synonyms);
       }
-      AI_SITUATION_META.filter((meta) => visibleSituations.includes(meta.key))
-        .filter((meta) => (situativeResults?.[meta.key] || []).length > 0)
-        .forEach((meta) => {
+      const situativeItems = AI_SITUATION_META.filter((meta) => visibleSituations.includes(meta.key))
+        .filter((meta) => (situativeResults?.[meta.key] || []).length > 0);
+      if (situativeItems.length > 0) {
+        const availableSpace = height - cursorY - 40;
+        const neededSpace = situativeItems.reduce((sum, meta) => {
+          const list = (situativeResults?.[meta.key] || []).join(" · ");
+          return sum + estimateSectionHeight(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
+        }, 0);
+        if (neededSpace > availableSpace) {
+          setError("Zu viele situative Synonyme für die Karte. Bitte Situationen filtern und erneut versuchen.");
+          return;
+        }
+        situativeItems.forEach((meta) => {
           const list = (situativeResults?.[meta.key] || []).join(" · ");
           addSection(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
         });
+      }
 
       ctx.fillStyle = "#4d4d4d";
       ctx.font = "600 11px 'Source Sans 3','Segoe UI',sans-serif";
