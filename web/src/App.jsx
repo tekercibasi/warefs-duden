@@ -1030,7 +1030,7 @@ export default function App() {
               <p>
                 As the rotting-braincell-struggle is real,
                 <br />
-                this pocket survival kit may assist you to  mastering German small talk under real-world conditions.
+                this pocket survival kit may assist you to  mastering German<br/> small talk under real-world conditions.
               </p>
               <p>Nobody’s gonna know.<br/>Have phun!<br />Akin</p>
 
@@ -1664,6 +1664,7 @@ export default function App() {
                   Bei dieser Website handelt es sich nicht um ein Wörterbuch, kein Referenzwerk und keine Sprachberatung.
                   Alle Inhalte – insbesondere Beispiele, Alternativen, Redewendungen und KI-generierte Texte – sind künstlerisch, subjektiv und experimentell.
                   Es wird keine Gewähr für Richtigkeit, Vollständigkeit oder Angemessenheit der Inhalte übernommen. Die Nutzung erfolgt ausschließlich auf eigene Verantwortung.
+                  Der Gebrauch ist ausschließlich dafür gedacht, dass eine einzelne Person sich per Passwort einloggt, eigenen Inhalt einträgt und damit den eigenen Wortschatz erweitert.
                 </p>
               </div>
               <div className="duden-help-section">
