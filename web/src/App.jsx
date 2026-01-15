@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import dudenLogo from "./img/logo_200.png";
 import testimonialImage from "./img/Testimonial.png";
 import qrCode from "./img/WarefsDuden.svg";
-import dIcon from "./img/d.svg";
+import dIcon from "./img/D.svg";
 
 const emptyForm = {
   term: "",
