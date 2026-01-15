@@ -156,6 +156,7 @@ export default function App() {
   const [showOverlay, setShowOverlay] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showImprint, setShowImprint] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [synonymPanels, setSynonymPanels] = useState({});
   const [openSynonymId, setOpenSynonymId] = useState(null);
   const [editorMode, setEditorMode] = useState(false);
@@ -199,6 +200,14 @@ export default function App() {
       throw new Error("Unerwartete Antwort vom Server");
     }
   };
+
+  useEffect(() => {
+    if (showLogin) {
+      requestAnimationFrame(() => {
+        loginInputRef.current?.focus();
+      });
+    }
+  }, [showLogin]);
 
   const loadEntries = async () => {
     setStatus("loading");
@@ -1071,37 +1080,49 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <form
-                className="duden-form duden-header-login"
-                onSubmit={loginForAi}
-                ref={loginFormRef}
-              >
-                <div className="duden-form-header">
-                  <h2>Editor freischalten</h2>
-                  <span className="duden-pill">Login</span>
-                </div>
-                <label htmlFor="duden-login-input">
-                  Passwort
-                  <div className="duden-header-login-row">
-                    <input
-                      id="duden-login-input"
-                      type="password"
-                      value={aiPassword}
-                      onChange={(event) => setAiPassword(event.target.value)}
-                      placeholder="Passwort eingeben"
-                      ref={loginInputRef}
-                    />
-                    <button type="submit" className="duden-secondary">
-                      Anmelden
-                    </button>
-                  </div>
-                </label>
-                {aiMessage ? (
-                  <p className={aiStatus === "error" ? "duden-error" : "duden-status"}>
-                    {aiMessage}
-                  </p>
-                ) : null}
-              </form>
+              <>
+                {!showLogin ? (
+                  <button
+                    type="button"
+                    className="duden-login-link"
+                    onClick={() => setShowLogin(true)}
+                  >
+                    Login
+                  </button>
+                ) : (
+                  <form
+                    className="duden-form duden-header-login"
+                    onSubmit={loginForAi}
+                    ref={loginFormRef}
+                  >
+                    <div className="duden-form-header">
+                      <h2>Editor freischalten</h2>
+                      <span className="duden-pill">Login</span>
+                    </div>
+                    <label htmlFor="duden-login-input">
+                      Passwort
+                      <div className="duden-header-login-row">
+                        <input
+                          id="duden-login-input"
+                          type="password"
+                          value={aiPassword}
+                          onChange={(event) => setAiPassword(event.target.value)}
+                          placeholder="Passwort eingeben"
+                          ref={loginInputRef}
+                        />
+                        <button type="submit" className="duden-secondary">
+                          Anmelden
+                        </button>
+                      </div>
+                    </label>
+                    {aiMessage ? (
+                      <p className={aiStatus === "error" ? "duden-error" : "duden-status"}>
+                        {aiMessage}
+                      </p>
+                    ) : null}
+                  </form>
+                )}
+              </>
             )}
           </div>
         </header>
