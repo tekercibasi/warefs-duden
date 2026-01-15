@@ -462,7 +462,7 @@ export default function App() {
       AI_SITUATION_META.filter((meta) => visibleSituations.includes(meta.key))
         .filter((meta) => (situativeResults?.[meta.key] || []).length > 0)
         .forEach((meta) => {
-          const list = (situativeResults?.[meta.key] || []).join(", ");
+          const list = (situativeResults?.[meta.key] || []).join(" · ");
           addSection(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
         });
 
