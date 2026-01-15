@@ -1363,6 +1363,7 @@ export default function App() {
                       ? panel.visibleSituations
                       : defaultVisibleSituations();
                     const synStatusMessage =
+                      isOpen &&
                       error &&
                       (error.includes("situative Synonyme") || error.includes("Synonyme passen"))
                         ? error
