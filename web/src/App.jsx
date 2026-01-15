@@ -807,6 +807,43 @@ export default function App() {
         }
       };
     });
+
+    // Wenn zuvor ein Platz-Fehler angezeigt wurde, prüfen wir nach Pill-Toggle neu und geben ggf. Erfolg aus.
+    setTimeout(() => {
+      const panel = synonymPanels[entryId];
+      if (!panel || !panel.results) return;
+      const visibleSituations = Array.isArray(panel.visibleSituations)
+        ? panel.visibleSituations
+        : defaultVisibleSituations();
+      const situativeItems = AI_SITUATION_META.filter((meta) => visibleSituations.includes(meta.key))
+        .filter((meta) => (panel.results?.[meta.key] || []).length > 0);
+      if (situativeItems.length === 0) {
+        setError("");
+        return;
+      }
+      // Grobe Platzschätzung wie im Card-Export
+      const width = 900;
+      const padding = 40;
+      const maxWidth = width - padding * 2;
+      const estimateSectionHeight = (label, content) => {
+        const labelHeight = 18;
+        const ctx = document.createElement("canvas").getContext("2d");
+        ctx.font = "400 13px 'Source Sans 3','Segoe UI',sans-serif";
+        const lines = wrapText(ctx, content || "—", maxWidth);
+        const contentHeight = lines.length * 20;
+        return labelHeight + contentHeight + 12;
+      };
+      const neededSpace = situativeItems.reduce((sum, meta) => {
+        const list = (panel.results?.[meta.key] || []).join(" · ");
+        return sum + estimateSectionHeight(`${meta.icon} ${meta.label.split(" · ")[0]}`, list);
+      }, 0);
+      const availableSpace = 540 - 150; // grobe Basis: Karte 540px hoch minus Header/Basics
+      if (neededSpace <= availableSpace) {
+        setError("Situative Synonyme passen jetzt auf die Karte.");
+      } else {
+        setError("Zu viele situative Synonyme für die Karte. Bitte weiter filtern.");
+      }
+    }, 0);
   };
 
   const applyLemmaSuggestion = (value) => {
