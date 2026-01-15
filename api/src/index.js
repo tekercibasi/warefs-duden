@@ -51,7 +51,17 @@ const entrySchema = new mongoose.Schema(
     term: { type: String, required: true, trim: true, unique: true },
     definition: { type: String, required: true, trim: true },
     example: { type: String, trim: true },
-    synonyms: { type: String, trim: true }
+    synonyms: { type: String, trim: true },
+    partOfSpeech: {
+      type: String,
+      enum: ["noun", "verb", "adjective", "adverb"],
+      required: false
+    },
+    article: {
+      type: String,
+      enum: ["der", "die", "das"],
+      required: false
+    }
   },
   { timestamps: true }
 );
@@ -111,7 +121,7 @@ app.post("/api/entries/ai-complete", async (req, res) => {
       return;
     }
 
-    const { term, definition, example, synonyms } = req.body || {};
+    const { term, definition, example, synonyms, partOfSpeech, article } = req.body || {};
     if (!term && !definition && !example && !synonyms) {
       res
         .status(400)
@@ -154,7 +164,9 @@ app.post("/api/entries/ai-complete", async (req, res) => {
         term: parsed.term ?? term ?? "",
         definition: parsed.definition ?? definition ?? "",
         example: parsed.example ?? example ?? "",
-        synonyms: parsed.synonyms ?? synonyms ?? ""
+        synonyms: parsed.synonyms ?? synonyms ?? "",
+        partOfSpeech: parsed.partOfSpeech ?? partOfSpeech ?? "",
+        article: parsed.article ?? article ?? ""
       });
     } catch (error) {
       console.error("AI completion failed", error);
@@ -246,16 +258,57 @@ app.post("/api/entries/ai-review", async (req, res) => {
   });
 });
 
+const normalizePartOfSpeech = (value) => {
+  if (!value) return undefined;
+  const normalized = String(value).toLowerCase().trim();
+  if (["noun", "verb", "adjective", "adverb"].includes(normalized)) return normalized;
+  return undefined;
+};
+
+const normalizeArticle = (value) => {
+  if (!value) return undefined;
+  const normalized = String(value).toLowerCase().trim();
+  if (["der", "die", "das"].includes(normalized)) return normalized;
+  return undefined;
+};
+
+const validateMorphology = (partOfSpeech, article) => {
+  const normalizedPos = normalizePartOfSpeech(partOfSpeech);
+  const normalizedArticle = normalizeArticle(article);
+
+  if (normalizedPos === "noun") {
+    if (!normalizedArticle) {
+      return { error: "Artikel ist für Nomen erforderlich." };
+    }
+    return { partOfSpeech: normalizedPos, article: normalizedArticle };
+  }
+
+  return { partOfSpeech: normalizedPos, article: undefined };
+};
+
 app.post("/api/entries", requireAuth, async (req, res) => {
-  const { term, definition, example, synonyms } = req.body || {};
+  const { term, definition, example, synonyms, partOfSpeech, article } = req.body || {};
 
   if (!term || !definition) {
     res.status(400).json({ error: "term and definition are required" });
     return;
   }
 
+  const morph = validateMorphology(partOfSpeech, article);
+  if (morph.error) {
+    res.status(400).json({ error: morph.error });
+    return;
+  }
+
   try {
-    const entry = await Entry.create({ term, definition, example, synonyms });
+    const entry = await Entry.create({
+      term,
+      definition,
+      example,
+      synonyms,
+      partOfSpeech: morph.partOfSpeech,
+      article: morph.article
+    });
     res.status(201).json(entry);
   } catch (error) {
     if (error && error.code === 11000) {
@@ -269,7 +322,7 @@ app.post("/api/entries", requireAuth, async (req, res) => {
 });
 
 app.put("/api/entries/:id", requireAuth, async (req, res) => {
-  const { term, definition, example, synonyms } = req.body || {};
+  const { term, definition, example, synonyms, partOfSpeech, article } = req.body || {};
   const { id } = req.params || {};
 
   if (!term || !definition) {
@@ -277,10 +330,23 @@ app.put("/api/entries/:id", requireAuth, async (req, res) => {
     return;
   }
 
+  const morph = validateMorphology(partOfSpeech, article);
+  if (morph.error) {
+    res.status(400).json({ error: morph.error });
+    return;
+  }
+
   try {
     const updated = await Entry.findByIdAndUpdate(
       id,
-      { term, definition, example, synonyms },
+      {
+        term,
+        definition,
+        example,
+        synonyms,
+        partOfSpeech: morph.partOfSpeech,
+        article: morph.article
+      },
       { new: true, runValidators: true }
     );
 
