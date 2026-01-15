@@ -25,10 +25,14 @@ SSL is handled in the NPM UI as requested. Repo: `https://github.com/tekercibasi
 
 ## How it works (Kurzfassung)
 - **Login:** `ADMIN_PASSWORD` schützt KI, Editieren und Löschen.
-- **Rechtschreibung:** Das fokussierte Lemma wird lokal mit nspell + deutschem Wörterbuch geprüft. Gibt es einen Vorschlag, muss er bestätigt werden, bevor KI läuft.
+- **Rechtschreibung/Lemmatisierung:** GPT‑4o liefert `{corrected, suggestions, lemma, partOfSpeech, article}`. Wortarten: noun, verb, adjective, adverb, interjection, particle, conjunction, preposition, phrase. Vorschläge sind optional; KI-Flow wird nicht blockiert.
 - **KI-Vervollständigung:** OpenAI ergänzt fehlende Felder (Bedeutung, Gebrauch, Synonyme) und respektiert bestehende Inhalte. Prompt zwingt Lemma auf Kleinschreibung (außer Eigennamen/Abkürzungen).
+- **Morphologie-Prefill:** Kommt `partOfSpeech/article` aus der Spellcheck-Antwort, werden Auswahlfelder im Formular vorbefüllt (Nomen + Artikel).
 - **Persistenz:** MongoDB (`mongo_data` Volume). API auf Port `4000`, Frontend (Vite) auf Port `80`.
-- **Hilfe im UI:** Footer-Link **Help** öffnet ein Overlay mit Nutzer- und Technik-Anleitung. Siehe auch `HELP.md`.
+- **Hilfe im UI:** Footer-Link **Help** öffnet ein Overlay mit Nutzer- und Technik-Anleitung inkl. Testhinweisen. Siehe auch `HELP.md`.
+
+### Qualität
+- Letzter Check: 20 Stichproben (Nomen/Verb/Adj/Adv/Interjektion/Partikel/Konjunktion/Präposition/Redewendung) direkt gegen GPT‑4o mit JSON-Schema; Ergebnis 19/20 korrekt (95 %), einziger Ausreißer: „schnell“ als Adjektiv statt Adverb.
 
 ## Husky & Commitlint
 - Hooks folgen der Strategie aus `/home/art-institut`: `.husky/commit-msg` ruft `npx --no-install commitlint --edit "$1"` auf.

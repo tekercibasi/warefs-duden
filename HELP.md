@@ -10,14 +10,14 @@ Diese App sammelt persönliche Wörterbucheinträge. Sie prüft dein Lemma auf R
 - **Hilfe im UI:** Im Footer gibt es einen **Help**‑Link. Er öffnet ein Overlay, das den Ablauf und die Technik erklärt.
 
 ## Was passiert wann?
-1. **Rechtschreibprüfung (Lemma):** Lokaler Spellchecker (nspell + deutsches Wörterbuch) schlägt Alternativen vor. Wenn es etwas zu korrigieren gibt, stoppt der KI‑Schritt, bis du auswählst.
-2. **KI‑Vervollständigung:** Wenn keine Korrektur nötig ist, ruft die App OpenAI auf und ergänzt fehlende Felder (Bedeutung, Gebrauch, Synonyme). Vorhandener Text bleibt bestehen.
+1. **Rechtschreibprüfung (Lemma):** GPT‑4o prüft das Lemma (und optional andere Felder), liefert Vorschläge/Artikel/Part-of-Speech, blockiert den Flow aber nicht.
+2. **KI‑Vervollständigung:** OpenAI ergänzt fehlende Felder (Bedeutung, Gebrauch, Synonyme). Vorhandener Text bleibt bestehen.
 3. **Speichern:** Einträge liegen in MongoDB. Die API läuft auf Port 4000, das Frontend auf 80 (Docker‑Compose).
 
 ## Technischer Überblick
 - **Frontend:** React (Vite). Rechtschreibhinweise und KI‑Ausgaben werden je Feld angezeigt.
-- **API:** Express + Mongoose. Endpunkte: `/api/entries` (CRUD), `/api/entries/ai-complete` (KI), `/api/entries/ai-review` (Spellcheck).
-- **Rechtschreibung:** nspell mit deutschem Wörterbuch, nur für das fokussierte Lemma.
+- **API:** Express + Mongoose. Endpunkte: `/api/entries` (CRUD), `/api/entries/ai-complete` (KI), `/api/entries/spellcheck` (Spellcheck/Lemmatisierung via GPT‑4o).
+- **Rechtschreibung:** GPT‑4o, liefert Vorschläge/Artikel/POS je Feld.
 - **KI:** OpenAI ergänzt nur fehlende Felder und korrigiert Rechtschreibung/Typografie schonende Weise.
 - **Login:** ADMIN_PASSWORD aktiviert Bearbeiten/Löschen/KI.
 - **Infra:** Docker‑Compose (web/api/mongo), Proxy‑Netz `proxy_net` für NPM.

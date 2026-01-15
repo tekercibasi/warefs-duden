@@ -4,7 +4,7 @@ Danke, dass du zu **warefs-duden.de** beitragen möchtest! Dieses Projekt ist ei
 
 ## Überblick & Architektur
 - **Frontend:** React (Vite), Port 80. UI enthält einen Help-Overlay (Footer-Link), der Nutzer:innen den Ablauf erklärt.
-- **API:** Express + Mongoose, Port 4000. Endpunkte: `/api/entries` (CRUD), `/api/entries/ai-complete` (OpenAI), `/api/entries/ai-review` (lokale Rechtschreibprüfung via nspell + deutsches Wörterbuch).
+- **API:** Express + Mongoose, Port 4000. Endpunkte: `/api/entries` (CRUD), `/api/entries/ai-complete` (OpenAI), `/api/entries/spellcheck` (GPT‑4o‑gestützte Rechtschreibung/Lemmatisierung).
 - **DB:** MongoDB 7 (Container, Volume `mongo_data`).
 - **Login:** `ADMIN_PASSWORD` schaltet Editieren/Löschen/KI frei.
 - **Netz:** Compose hängt `web` ans `proxy_net` für NPM-Routing.
