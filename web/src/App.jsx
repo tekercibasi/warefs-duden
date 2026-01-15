@@ -29,6 +29,7 @@ const PART_LABELS = {
   preposition: "Präposition",
   phrase: "Redewendung"
 };
+const PART_OPTIONS = Object.entries(PART_LABELS).map(([value, label]) => ({ value, label }));
 
 const partLabel = (entry) => {
   const parts = asArray(entry?.partOfSpeech).map((p) => p.toLowerCase());
@@ -252,14 +253,14 @@ export default function App() {
   const updateForm = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
   };
-  const updatePartOfSpeech = (event) => {
-    const options = Array.from(event.target.selectedOptions).map((opt) => opt.value);
-    const value = options;
-    setForm((current) => ({
-      ...current,
-      partOfSpeech: value,
-      article: value.includes("noun") ? current.article : ""
-    }));
+  const togglePartOfSpeech = (value) => () => {
+    setForm((current) => {
+      const currentList = asArray(current.partOfSpeech).map((p) => asText(p).trim().toLowerCase());
+      const has = currentList.includes(value);
+      const next = has ? currentList.filter((item) => item !== value) : [...currentList, value];
+      const article = next.includes("noun") ? current.article : "";
+      return { ...current, partOfSpeech: next, article };
+    });
   };
   const updateArticle = (event) => {
     setForm((current) => ({ ...current, article: event.target.value }));
@@ -302,6 +303,10 @@ export default function App() {
     lastFocusedField.current = field;
     setFocusedFieldState(field);
   };
+  const isPartActive = (value) =>
+    asArray(form.partOfSpeech)
+      .map((p) => asText(p).trim().toLowerCase())
+      .includes(value);
 
   const applyLowercaseSuggestionFor = (field) => {
     setForm((current) => ({
@@ -1041,20 +1046,24 @@ export default function App() {
                       })()}
                     </label>
                     <div className="duden-inline">
-                      <label>
-                        Wortart
-                        <select value={form.partOfSpeech} onChange={updatePartOfSpeech} multiple>
-                          <option value="">Bitte wählen</option>
-                          <option value="noun">Nomen</option>
-                          <option value="verb">Verb</option>
-                          <option value="adjective">Adjektiv</option>
-                          <option value="adverb">Adverb</option>
-                          <option value="interjection">Interjektion</option>
-                          <option value="particle">Partikel</option>
-                          <option value="conjunction">Konjunktion</option>
-                          <option value="preposition">Präposition</option>
-                          <option value="phrase">Redewendung</option>
-                        </select>
+                      <label className="duden-pos">
+                        <span>Wortart</span>
+                        <div className="duden-pos-pills" role="group" aria-label="Wortarten">
+                          {PART_OPTIONS.map((opt) => {
+                            const active = isPartActive(opt.value);
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                className={`duden-pos-pill${active ? " is-active" : ""}`}
+                                onClick={togglePartOfSpeech(opt.value)}
+                                aria-pressed={active}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </label>
                       {asArray(form.partOfSpeech).includes("noun") ? (
                         <label>
