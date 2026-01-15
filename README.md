@@ -2,6 +2,8 @@
 
 Small personal dictionary app with a React frontend and MongoDB-backed API. The stack is dockerized and intended to be routed through the shared Nginx Proxy Manager on `proxy_net`.
 
+**Impressum:** Siehe `IMPRESSUM.md` (wichtiger Hinweis: privates Einzel-Login-Projekt).  
+
 ## Stack
 - `web`: React (Vite dev server) on port 80
 - `api`: Express + Mongoose on port 4000
