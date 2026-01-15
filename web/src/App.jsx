@@ -1237,6 +1237,28 @@ export default function App() {
                             title="Lernkarte herunterladen"
                             aria-label="Lernkarte herunterladen"
                           />
+                          {isLoggedIn && editorMode ? (
+                            <>
+                              <button
+                                type="button"
+                                className="duden-icon-btn"
+                                onClick={() => startEdit(entry)}
+                                title="Eintrag bearbeiten"
+                                aria-label="Eintrag bearbeiten"
+                              >
+                                ✎
+                              </button>
+                              <button
+                                type="button"
+                                className="duden-icon-btn duden-danger"
+                                onClick={() => deleteEntry(entry)}
+                                title="Eintrag löschen"
+                                aria-label="Eintrag löschen"
+                              >
+                                🗑
+                              </button>
+                            </>
+                          ) : null}
                         </div>
                       </div>
                       <p className="duden-entry-type">
@@ -1368,26 +1390,6 @@ export default function App() {
                           </div>
                         );
                       })()}
-                      <div className="duden-entry-actions">
-                        {isLoggedIn && editorMode ? (
-                          <>
-                            <button
-                              type="button"
-                              className="duden-edit"
-                              onClick={() => startEdit(entry)}
-                            >
-                              Bearbeiten
-                            </button>
-                            <button
-                              type="button"
-                              className="duden-edit"
-                              onClick={() => deleteEntry(entry)}
-                            >
-                              Löschen
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
                     </article>
                   ))
                 )}
