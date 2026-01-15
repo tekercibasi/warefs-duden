@@ -1049,7 +1049,7 @@ export default function App() {
               AI-supported, really clever Edition
             </p>
             <p className="duden-slogan">
-              OG German Masterclass: <strong>SITUATIVE SYNONYM EDITION</strong>
+              OG German Masterclass: <strong>Situative Synonm Edition</strong>
             </p>
             <p className="duden-subtitle">
               Das Toolkit für jeden, der über den Lemmarand denkt – und damit immer richtig liegt.
