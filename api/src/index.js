@@ -333,7 +333,8 @@ const normalizePartOfSpeech = (value) => {
   const normalized = list
     .map((item) => String(item).toLowerCase().trim())
     .filter((item) => allowedPos.includes(item));
-  return Array.from(new Set(normalized));
+  const unique = Array.from(new Set(normalized));
+  return unique.slice(0, 1); // enforce single primary POS
 };
 
 const capitalizeFirst = (value) => {
@@ -364,7 +365,7 @@ const validateMorphology = (partOfSpeech, article) => {
 };
 
 app.post("/api/entries", requireAuth, async (req, res) => {
-  const { term, definition, example, synonyms, partOfSpeech, article } = req.body || {};
+    const { term, definition, example, synonyms, partOfSpeech, article } = req.body || {};
 
   if (!term || !definition) {
     res.status(400).json({ error: "term and definition are required" });

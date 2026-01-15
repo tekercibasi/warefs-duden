@@ -262,7 +262,8 @@ export default function App() {
     setForm((current) => {
       const currentList = asArray(current.partOfSpeech).map((p) => asText(p).trim().toLowerCase());
       const has = currentList.includes(value);
-      const next = has ? currentList.filter((item) => item !== value) : [...currentList, value];
+      // Single selection: click toggles the value, otherwise replace with the clicked one
+      const next = has ? [] : [value];
       const article = next.includes("noun") ? current.article : "";
       return { ...current, partOfSpeech: next, article };
     });
@@ -275,7 +276,8 @@ export default function App() {
     if (!termReview) return;
     const suggestedPos = asArray(termReview.partOfSpeech)
       .map((p) => asText(p).trim().toLowerCase())
-      .filter(Boolean);
+      .filter(Boolean)
+      .slice(0, 1);
     const suggestedArticle = asText(termReview.article).trim().toLowerCase();
     if (suggestedPos.length === 0 && !suggestedArticle) return;
 
@@ -458,8 +460,9 @@ export default function App() {
       const normalizedPos = asArray(form.partOfSpeech)
         .map((p) => asText(p).toLowerCase().trim())
         .filter(Boolean);
+      const primaryPos = normalizedPos[0] ? [normalizedPos[0]] : [];
       const normalizedArticle = asText(form.article).trim().toLowerCase();
-      if (normalizedPos.includes("noun") && !normalizedArticle) {
+      if (primaryPos.includes("noun") && !normalizedArticle) {
         setError("Bitte Artikel für Nomen auswählen.");
         setStatus("idle");
         return;
@@ -470,8 +473,8 @@ export default function App() {
         definition: asText(form.definition).trim(),
         example: asText(form.example).trim(),
         synonyms: asText(form.synonyms).trim(),
-        partOfSpeech: normalizedPos.length ? normalizedPos : undefined,
-        article: normalizedPos.includes("noun") ? normalizedArticle : undefined
+        partOfSpeech: primaryPos.length ? primaryPos : undefined,
+        article: primaryPos.includes("noun") ? normalizedArticle : undefined
       };
 
       let response;
@@ -665,6 +668,7 @@ export default function App() {
       const normalizedPos = asArray(form.partOfSpeech)
         .map((p) => asText(p).toLowerCase().trim())
         .filter(Boolean);
+      const primaryPos = normalizedPos[0] ? [normalizedPos[0]] : [];
       const normalizedArticle = asText(form.article).trim().toLowerCase();
       const focusedPayload =
         focusedField === "term"
@@ -680,8 +684,8 @@ export default function App() {
               example: undefined,
               synonyms: undefined
             };
-      focusedPayload.partOfSpeech = normalizedPos.length ? normalizedPos : undefined;
-      focusedPayload.article = normalizedPos.includes("noun") ? normalizedArticle : undefined;
+      focusedPayload.partOfSpeech = primaryPos.length ? primaryPos : undefined;
+      focusedPayload.article = primaryPos.includes("noun") ? normalizedArticle : undefined;
       const response = await fetch("/api/entries/ai-complete", {
         method: "POST",
         headers: {
@@ -711,7 +715,8 @@ export default function App() {
         setForm((current) => {
           const payloadPos = asArray(payload.partOfSpeech)
             .map((p) => asText(p).trim().toLowerCase())
-            .filter(Boolean);
+            .filter(Boolean)
+            .slice(0, 1);
           const payloadArticle = asText(payload.article).trim().toLowerCase();
           const currentPos = asArray(current.partOfSpeech)
             .map((p) => asText(p).trim().toLowerCase())
@@ -750,8 +755,8 @@ export default function App() {
     const labelMap = {
       term: "KI: Beschreibung, Gebrauch und Synonyme",
       definition: "KI: Lemma-Vorschläge holen",
-      example: "KI: Lemma, Beschreibung und Synonyme",
-      synonyms: "KI: Lemma, Beschreibung und Gebrauch"
+      example: "KI nicht verfügbar",
+      synonyms: "KI nicht verfügbar"
     };
     return labelMap[field] || "Mit KI ergänzen";
   };
