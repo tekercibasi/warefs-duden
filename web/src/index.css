@@ -42,9 +42,26 @@ body {
 .duden {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 48px 24px 64px;
+  gap: 14px;
+}
+
+.duden-underframe-disclaimer {
+  margin: 0;
+  width: min(1200px, 100%);
+  text-align: center;
+  color: rgba(17, 17, 17, 0.72);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  backdrop-filter: blur(6px);
 }
 
 .duden-overlay {
@@ -83,7 +100,7 @@ body {
 
 .duden-help-section h3 {
   margin: 0 0 8px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .duden-help-section ul {
@@ -91,20 +108,24 @@ body {
   padding-left: 18px;
   display: grid;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
 .duden-help-text {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
+}
+
+.duden-imprint .duden-help-text {
+  line-height: 1.6;
 }
 
 .duden-overlay-heart {
   position: relative;
-  width: min(560px, 94vw);
-  height: min(520px, 86vw);
+  width: min(600px, 94vw);
+  height: min(570px, 86vw);
   background: #fff8e2;
   -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 92C26 74 4 55 4 34C4 16 18 4 33 4C42 4 48 10 50 18C52 10 58 4 67 4C82 4 96 16 96 34C96 55 74 74 50 92Z' fill='black'/></svg>");
   mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 92C26 74 4 55 4 34C4 16 18 4 33 4C42 4 48 10 50 18C52 10 58 4 67 4C82 4 96 16 96 34C96 55 74 74 50 92Z' fill='black'/></svg>");
@@ -131,7 +152,8 @@ body {
 
 .duden-overlay-inner {
   position: absolute;
-  inset: 16%;
+  padding-top: 25px;
+  inset: 30% 15% 20%; 
   display: grid;
   place-items: center;
   text-align: center;
@@ -250,10 +272,20 @@ body {
   box-sizing: border-box;
 }
 
+.duden-footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
 .duden-footer-actions {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .duden-footer-testimonial {
@@ -261,9 +293,10 @@ body {
   left: -30px;
   bottom: -30px;
   width: var(--testimonial-size);
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
   opacity: 0.95;
+  cursor: pointer;
 }
 
 .duden-footer-button {
@@ -282,6 +315,58 @@ body {
 
 .duden-footer-button:hover {
   color: var(--duden-ink);
+}
+
+.duden-mobile-menu {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2001;
+}
+
+.duden-mobile-menu-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(92vw, 420px);
+  height: 100%;
+  background: var(--duden-yellow);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.25);
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  overflow: auto;
+}
+
+.duden-mobile-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.duden-mobile-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  pointer-events: none;
+}
+
+.duden-mobile-menu.is-open {
+  pointer-events: auto;
+}
+
+.duden-mobile-menu.is-open .duden-mobile-menu-panel {
+  transform: translateX(0);
+}
+
+.duden-mobile-menu.is-open .duden-mobile-menu-backdrop {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .duden-link-button {
@@ -327,6 +412,7 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
+  position: relative;
 }
 
 .duden-logo-wrap {
@@ -374,7 +460,7 @@ body {
 
 .duden-subtitle {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--duden-muted);
   max-width: 34ch;
@@ -392,21 +478,58 @@ body {
 
 .duden-content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 40px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
   align-items: start;
+}
+
+.duden-mobile-menu-toggle {
+  display: none;
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1600;
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.duden-toolbar {
+  grid-column: 1 / -1;
+  margin-bottom: 24px;
 }
 
 .duden-search {
   display: grid;
   gap: 8px;
-  margin-bottom: 24px;
+  margin: 0 0 18px;
+}
+
+.duden-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.duden-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-bottom: 12px;
 }
 
 .duden-search label {
   text-transform: uppercase;
   letter-spacing: 0.28em;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--duden-muted);
 }
 
@@ -414,7 +537,7 @@ body {
   border: 1px solid rgba(17, 17, 17, 0.28);
   background: rgba(255, 255, 255, 0.92);
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 13px;
   font-family: var(--duden-sans);
   border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -424,6 +547,26 @@ body {
   outline: 3px solid var(--duden-focus-ring);
   outline-offset: 2px;
   border-color: #000000;
+}
+
+.duden-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.duden-search input::-ms-clear {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .duden-toolbar {
+    margin-bottom: 18px;
+  }
+
+  .duden-toolbar-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
 }
 
 .duden-login-link {
@@ -456,6 +599,39 @@ body {
   margin-left: auto;
 }
 
+.duden-header-login {
+  display: grid;
+  gap: 8px;
+  align-items: flex-start;
+  min-width: 260px;
+  padding: 14px;
+  background: var(--duden-surface);
+  border: 1px solid var(--duden-line);
+  border-left: 6px solid var(--duden-yellow);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+}
+
+.duden-header-login label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--duden-ink);
+}
+
+.duden-header-login-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.duden-header-login input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+}
+
 .duden-login-link:hover {
   background: #000000;
   color: #ffffff;
@@ -464,7 +640,7 @@ body {
 }
 
 .duden-count {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--duden-muted);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -473,6 +649,7 @@ body {
 .duden-list {
   display: grid;
   gap: 22px;
+  margin-top: 6px;
 }
 
 .duden-entry {
@@ -492,6 +669,75 @@ body {
   font-weight: 700;
   font-size: 18px;
   line-height: 1.2;
+}
+
+.duden-entry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.duden-entry-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Nur das Karten-Icon gehört in den Kopf; Bearbeiten/Löschen bleiben unten */
+.duden-entry-head .duden-edit {
+  display: none;
+}
+
+.duden-ai-trigger {
+  border: 1px solid var(--duden-line);
+  background: #fff9e6;
+  color: var(--duden-ink);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+}
+
+.duden-ai-trigger:hover {
+  border-color: var(--duden-yellow-deep);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.duden-ai-trigger.has-results {
+  border-color: var(--duden-yellow);
+  background: #fff5d1;
+}
+
+.duden-ai-dot {
+  position: absolute;
+  inset: 6px 6px auto auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--duden-danger);
+  box-shadow: 0 0 0 2px #fff5d1;
+}
+
+.duden-ai-trigger.is-loading {
+  position: relative;
+  color: rgba(17, 17, 17, 0.45);
+}
+
+.duden-ai-trigger.is-loading::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 999px;
+  border: 2px solid rgba(17, 17, 17, 0.2);
+  border-top-color: var(--duden-ink);
+  animation: dudenSpin 0.9s linear infinite;
 }
 
 .duden-entry-type {
@@ -523,15 +769,163 @@ body {
   margin-top: 10px;
 }
 
-.duden-status {
+.duden-ai-panel {
+  margin-top: 12px;
+  border: 1px solid var(--duden-line);
+  border-radius: 10px;
+  background: #fffaf0;
+  padding: 10px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.duden-ai-panel-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.duden-ai-panel-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.duden-ai-toggle {
+  border: none;
+  background: transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+  color: var(--duden-muted);
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.duden-ai-panel-body {
+  display: grid;
+  gap: 12px;
+}
+
+.duden-ai-situations {
+  display: grid;
+  gap: 12px;
+}
+
+.duden-ai-situation {
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  display: grid;
+  gap: 6px;
+}
+
+.duden-ai-situation-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--duden-muted);
+}
+
+.duden-ai-situation-icon {
+  min-width: 28px;
+  min-height: 28px;
+  font-size: 20px;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--duden-ink);
+  /* background: #fff6d4; */
+  padding: 0;
+}
+
+.duden-ai-situation-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.duden-ai-chip {
+  border: 1px solid var(--duden-line);
+  border-radius: 999px;
+  padding: 4px 8px;
   font-size: 11px;
+  background: #fffdf7;
+}
+
+.duden-ai-filters {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.duden-ai-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: none;
+  display: inline-block;
+  background: url("./img/bulb.png") center center / 18px 18px no-repeat #fff5d1;
+}
+
+.duden-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--duden-line);
+  background: #fffdf7;
+  color: var(--duden-ink);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.duden-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.12);
+  border-color: var(--duden-yellow-deep);
+}
+
+.duden-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.duden-icon-btn.duden-danger {
+  border-color: var(--duden-danger);
+  color: var(--duden-danger);
+}
+
+.duden-icon-btn.duden-danger:hover {
+  background: var(--duden-danger);
+  color: #ffffff;
+  border-color: var(--duden-danger);
+}
+
+.duden-status {
+  font-size: 12px;
   color: var(--duden-muted);
   margin: 0 0 6px;
 }
 
 .duden-error {
   margin: 0 0 16px;
-  font-size: 11px;
+  font-size: 12px;
   color: #8d1f16;
 }
 
@@ -539,6 +933,12 @@ body {
   display: grid;
   gap: 16px;
   align-content: start;
+}
+
+.duden-form-inline {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
 }
 
 .duden-form {
@@ -555,8 +955,7 @@ body {
 
 /* Dedicated styling for the login card */
 .duden-form.duden-login {
-  max-width: 520px;
-  margin: 0 auto;
+  width: 100%;
   gap: 10px;
 }
 
@@ -588,7 +987,7 @@ body {
 .duden-form label {
   display: grid;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--duden-ink);
 }
@@ -599,7 +998,7 @@ body {
   border: 1px solid rgba(17, 17, 17, 0.28);
   background: var(--duden-paper);
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-family: var(--duden-sans);
   resize: vertical;
   border-radius: 8px;
@@ -639,6 +1038,12 @@ body {
 
 .duden-inline label {
   flex: 1 1 180px;
+}
+
+.duden-article {
+  display: grid;
+  gap: 6px;
+  max-width: 220px;
 }
 
 .duden-form button:not(.duden-clear):not(.duden-pos-pill),
@@ -713,7 +1118,18 @@ body {
   padding-inline: 14px;
 }
 
-.duden-card::before {
+.duden-card.duden-card--icon {
+  border: none;
+  background: transparent;
+  color: var(--duden-ink);
+  padding: 0;
+  min-height: auto;
+  width: 30px;
+  height: 30px;
+  box-shadow: none;
+}
+
+.duden-card.duden-card--icon::before {
   content: "";
   display: block;
   width: 14px;
@@ -724,6 +1140,9 @@ body {
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.12);
 }
 
+.duden-edit-btn {
+  border-color: var(--duden-ink);
+}
 .duden-logout {
   background: #ffffff;
   border-color: var(--duden-danger);
@@ -883,7 +1302,7 @@ body {
   gap: 6px;
 }
 
-.duden-lowercase-hint button {
+.duden-lowercase-hint button:not(.duden-clear):not(.duden-pos-pill) {
   text-transform: none;
   letter-spacing: 0;
   font-size: 12px;
@@ -952,6 +1371,15 @@ body {
   }
 }
 
+@keyframes dudenSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 980px) {
   .duden-content {
     grid-template-columns: 1fr;
@@ -972,6 +1400,32 @@ body {
     align-items: center;
     flex-direction: column;
     gap: 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  .duden-brandbar {
+    padding-top: 24px;
+  }
+
+  .duden-logo {
+    position: static;
+    transform: none;
+    height: 96px;
+  }
+
+  .duden-mobile-menu-toggle {
+    display: inline-flex;
+  }
+
+  .duden-toolbar-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .duden-side {
+    display: none;
   }
 }
 

@@ -83,6 +83,29 @@ const entrySchema = new mongoose.Schema(
 );
 
 const Entry = mongoose.model("Entry", entrySchema);
+const AI_SITUATION_KEYS = [
+  "arbeit",
+  "schwiegereltern",
+  "philosophie_3uhr",
+  "gasse_betrunken",
+  "behoerdlich"
+];
+const emptyAlternativeResults = () =>
+  AI_SITUATION_KEYS.reduce((acc, key) => {
+    acc[key] = [];
+    return acc;
+  }, {});
+const alternativeSchema = new mongoose.Schema(
+  {
+    item: { type: String, required: true, trim: true },
+    situation: { type: String, required: true, enum: AI_SITUATION_KEYS },
+    alternative_text: { type: String, required: true, trim: true },
+    timestamp: { type: Date, required: true },
+    model_version: { type: String, trim: true }
+  },
+  { timestamps: false }
+);
+const Alternative = mongoose.model("Alternative", alternativeSchema);
 
 const app = express();
 app.use(
@@ -189,6 +212,247 @@ app.post("/api/entries/ai-complete", async (req, res) => {
       res.status(500).json({ error: "AI completion failed" });
     }
   });
+});
+
+const AI_ALTERNATIVES_SYSTEM_PROMPT = `
+AGENTENANWEISUNG – Situative Alternativen (geordnet nach Tonalität)
+
+Du agierst als Sprach- und Kontext-Agent.
+
+Deine Aufgabe ist es, situativ passende alternative Formulierungen zu erzeugen und sie innerhalb jeder Situation nach Tonalität zu ordnen.
+
+Wichtig:
+- Die Ausgabe darf freundlich, neutral, verspielt oder kritisch sein.
+- Überheblichkeit ist nicht der Default.
+- Antworte ausschließlich als JSON-Objekt im unten angegebenen Schema.
+
+Zentrale Sortierregel (verbindlich)
+Innerhalb jeder Situation müssen die Alternativen wie folgt sortiert sein:
+1) freundlich / positiv / wohlwollend
+2) neutral / locker / ironisch
+3) kritisch / flapsig / sozial unpassend
+Die Liste geht von sozial akzeptabel zu zunehmend unfreundlich. Nicht alle Stufen müssen extrem sein, aber die Richtung muss erkennbar sein.
+Wenn nur eine Alternative geliefert wird, wähle eine mittlere Tonalität.
+
+Allgemeine Regeln
+- Erzeuge 1–3 Alternativen pro Situation.
+- Alternativen dürfen positiv, neutral oder kritisch sein.
+- Positive Varianten sind ausdrücklich erlaubt.
+- Keine Erklärungen, keine Metakommentare, keine Emojis.
+- Keine Wiederholungen zwischen Situationen.
+- Die emotionale Intensität ist an den Ausgangsbegriff anzupassen; neutrale oder abstrakte Begriffe erfordern mildere Tonlagen.
+
+Situationen & Tonrahmen
+
+1. Karrieregefährdend (Ziel: im Arbeitskontext unprofessionell)
+- freundlich-locker → ironisch → schnippisch
+- darf fehlplatzierte Begeisterung enthalten
+- nicht offen beleidigend
+- Sortierung: zuerst überfreundlich oder zu salopp, zuletzt latent respektlos
+
+2. Schwiegereltern-kritisch (Ziel: gut gemeint, aber irritierend)
+- freundlich → verniedlichend → zu locker
+- positiver Ton ist häufig angemessen
+- Sortierung: von höflich-locker zu sozial unangenehm
+
+3. 3-Uhr-tauglich (Tee & Philosophie) (Ziel: wohlwollende Überhöhung)
+- staunend → poetisch → leicht entrückt
+- Sortierung: von ruhig-wertschätzend zu überhöht-abgehoben
+
+4. Gasse, betrunken (Ziel: emotionale Nähe)
+- herzlich → flapsig → derb
+- Begeisterung ist erlaubt
+- Sortierung: von kumpelhaft zu zunehmend grob
+
+5. Behördlich leer (Ziel: emotionslose Distanz)
+- neutral → abstrakt → maximal entpersonalisiert
+- Sortierung: von sachlich zu zunehmend unpersönlich
+
+Ausgabeformat (zwingend):
+{
+  "item": "<originaler Ausdruck>",
+  "results": {
+    "arbeit": [],
+    "schwiegereltern": [],
+    "philosophie_3uhr": [],
+    "gasse_betrunken": [],
+    "behoerdlich": []
+  }
+}
+
+Qualitätskontrolle
+- Die Reihenfolge innerhalb jeder Liste muss eine klare Eskalation zeigen.
+- Mindestens eine Alternative pro Item darf positiv oder freundlich sein.
+- Wenn alle Alternativen gleich unfreundlich klingen, ist die Aufgabe nicht erfüllt.
+
+Priorität:
+1) Korrekte Sortierung von freundlich → unfreundlich
+2) Situationsangemessene Tonalität
+3) Sprachliche Natürlichkeit
+`;
+
+const buildAlternativesUserPrompt = (itemText) => `Ausdruck: "${itemText}"`;
+
+const normalizeAlternativesResponse = (payload, itemText) => {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Ungültige KI-Antwort");
+  }
+  const results = payload.results && typeof payload.results === "object" ? payload.results : {};
+  const normalized = emptyAlternativeResults();
+  const toList = (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === "string" && value.trim()) return [value];
+    return [];
+  };
+
+  AI_SITUATION_KEYS.forEach((key) => {
+    const values = toList(results[key]);
+    const cleaned = values
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter(Boolean)
+      .slice(0, 3);
+    if (cleaned.length === 0) {
+      throw new Error(`Keine Alternativen für ${key}`);
+    }
+    normalized[key] = cleaned;
+  });
+
+  return { item: itemText, results: normalized };
+};
+
+const aggregateAlternatives = async (item) => {
+  const normalizedItem = typeof item === "string" ? item.trim() : "";
+  if (!normalizedItem) {
+    return { item: item || "", results: emptyAlternativeResults() };
+  }
+  const docs = await Alternative.find({ item: normalizedItem }).sort({ timestamp: 1 });
+  const results = emptyAlternativeResults();
+  docs.forEach((doc) => {
+    if (!results[doc.situation]) return;
+    if (!results[doc.situation].includes(doc.alternative_text)) {
+      results[doc.situation].push(doc.alternative_text);
+    }
+  });
+  return { item: normalizedItem, results };
+};
+
+app.post("/api/entries/ai-alternatives", async (req, res) => {
+  if (!openai) {
+    res.status(400).json({ error: "AI completion is not configured" });
+    return;
+  }
+
+  const itemText = typeof req.body?.item === "string" ? req.body.item : "";
+  if (!itemText.trim()) {
+    res.status(400).json({ error: "item is required" });
+    return;
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: AI_ALTERNATIVES_SYSTEM_PROMPT },
+        { role: "user", content: buildAlternativesUserPrompt(itemText) }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.8
+    });
+
+    const raw = completion.choices?.[0]?.message?.content;
+    if (!raw) {
+      throw new Error("Keine Antwort erhalten");
+    }
+
+    const parsed = JSON.parse(raw);
+    const normalized = normalizeAlternativesResponse(parsed, itemText);
+    const timestamp = new Date();
+    const modelVersion = completion.model || "gpt-4o-mini";
+    const existingDocs = await Alternative.find({ item: normalized.item });
+    const existingBySituation = existingDocs.reduce((acc, doc) => {
+      const key = doc.situation;
+      const value = (doc.alternative_text || "").toLowerCase();
+      if (!acc[key]) acc[key] = new Set();
+      if (value) acc[key].add(value);
+      return acc;
+    }, {});
+    const docs = AI_SITUATION_KEYS.flatMap((key) =>
+      normalized.results[key].map((text) => ({
+        item: normalized.item,
+        situation: key,
+        alternative_text: text,
+        timestamp,
+        model_version: modelVersion
+      }))
+    );
+
+    const toInsert = docs.filter((doc) => {
+      const key = doc.situation;
+      const value = (doc.alternative_text || "").toLowerCase();
+      if (!value) return false;
+      if (!existingBySituation[key]) existingBySituation[key] = new Set();
+      if (existingBySituation[key].has(value)) return false;
+      existingBySituation[key].add(value);
+      return true;
+    });
+
+    if (toInsert.length > 0) {
+      await Alternative.insertMany(toInsert);
+    }
+    const aggregated = await aggregateAlternatives(normalized.item);
+    res.json(aggregated);
+  } catch (error) {
+    console.error("AI alternatives failed", error);
+    res.status(502).json({ error: error?.message || "AI alternatives failed" });
+  }
+});
+
+app.get("/api/entries/:id/ai-alternatives", async (req, res) => {
+  const { id } = req.params || {};
+  try {
+    const entry = await Entry.findById(id);
+    if (!entry) {
+      res.status(404).json({ error: "entry not found" });
+      return;
+    }
+    const aggregated = await aggregateAlternatives(entry.term);
+    res.json(aggregated);
+  } catch (error) {
+    console.error("Failed to load alternatives", error);
+    res.status(500).json({ error: "failed to load alternatives" });
+  }
+});
+
+app.delete("/api/entries/:id/ai-alternatives", async (req, res) => {
+  const { id } = req.params || {};
+  try {
+    const entry = await Entry.findById(id);
+    if (!entry) {
+      res.status(404).json({ error: "entry not found" });
+      return;
+    }
+    await Alternative.deleteMany({ item: entry.term });
+    res.json({ item: entry.term, results: emptyAlternativeResults() });
+  } catch (error) {
+    console.error("Failed to delete alternatives", error);
+    res.status(500).json({ error: "failed to delete alternatives" });
+  }
+});
+
+app.get("/api/entries/ai-alternatives/summary", async (_req, res) => {
+  try {
+    const summary = await Alternative.aggregate([
+      { $group: { _id: "$item", count: { $sum: 1 } } }
+    ]);
+    const normalized = summary.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {});
+    res.json({ summary: normalized });
+  } catch (error) {
+    console.error("Failed to load alternatives summary", error);
+    res.status(500).json({ error: "failed to load alternatives summary" });
+  }
 });
 
 app.post("/api/entries/spellcheck", async (req, res) => {

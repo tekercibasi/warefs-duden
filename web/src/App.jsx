@@ -34,6 +34,39 @@ const PART_LABELS = {
   phrase: "Redewendung"
 };
 const PART_OPTIONS = Object.entries(PART_LABELS).map(([value, label]) => ({ value, label }));
+const AI_SITUATION_META = [
+  {
+    key: "arbeit",
+    label: "Karrieregefährdend · HR-sensibel · Meeting-ungeeignet · Nicht zitierfähig",
+    icon: "⚠"
+  },
+  {
+    key: "schwiegereltern",
+    label: "Schwiegerelternkritisch · Sonntagsessen-ungeeignet · Erklärungsbedürftig",
+    icon: "❤"
+  },
+  {
+    key: "philosophie_3uhr",
+    label: "3-Uhr-tauglich · Tee & These · Gedankenschwer · Leicht überhöht",
+    icon: "☕"
+  },
+  {
+    key: "gasse_betrunken",
+    label: "Gassentauglich · Promillefest · Freundeskreis erprobt · Grammatik optional",
+    icon: "🍻"
+  },
+  {
+    key: "behoerdlich",
+    label: "Behördlich geprüft · Emotionsfrei · Haftungsarm · Unangreifbar",
+    icon: "🏛️"
+  }
+];
+const countResults = (results) =>
+  AI_SITUATION_META.reduce((sum, meta) => {
+    const list = results?.[meta.key];
+    return sum + (Array.isArray(list) ? list.length : 0);
+  }, 0);
+const defaultVisibleSituations = () => AI_SITUATION_META.map((meta) => meta.key);
 
 const partLabel = (entry) => {
   const parts = asArray(entry?.partOfSpeech).map((p) => p.toLowerCase());
@@ -121,8 +154,11 @@ export default function App() {
   const [reviewResult, setReviewResult] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showImprint, setShowImprint] = useState(false);
+  const [synonymPanels, setSynonymPanels] = useState({});
+  const [openSynonymId, setOpenSynonymId] = useState(null);
+  const [editorMode, setEditorMode] = useState(false);
   const [focusedFieldState, setFocusedFieldState] = useState(null);
   const loginFormRef = useRef(null);
   const loginInputRef = useRef(null);
@@ -178,6 +214,7 @@ export default function App() {
       );
       setEntries(sorted);
       setStatus("idle");
+      fetchAlternativeSummary(sorted);
     } catch (err) {
       setError(err.message || "Einträge konnten nicht geladen werden");
       setStatus("error");
@@ -200,12 +237,6 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      setShowSidebar(true);
-    }
-  }, [isLoggedIn]);
-
   const openOverlay = () => {
     setShowOverlay(true);
   };
@@ -214,18 +245,16 @@ export default function App() {
     setShowHelp(true);
   };
 
+  const openImprint = () => {
+    setShowImprint(true);
+  };
+
   const closeHelp = () => {
     setShowHelp(false);
   };
 
-  const openLoginPanel = () => {
-    setShowSidebar(true);
-    requestAnimationFrame(() => {
-      if (window.matchMedia("(max-width: 980px)").matches) {
-        loginFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-      loginInputRef.current?.focus();
-    });
+  const closeImprint = () => {
+    setShowImprint(false);
   };
 
   const updateForm = (field) => (event) => {
@@ -233,6 +262,28 @@ export default function App() {
     setForm((current) => ({ ...current, [field]: nextValue }));
     if (field === "term") {
       setLemmaSuggestions([]);
+    }
+  };
+  const fetchAlternativeSummary = async (list) => {
+    try {
+      const response = await fetch("/api/entries/ai-alternatives/summary");
+      const payload = await safeJson(response);
+      if (!response.ok) return;
+      const summary = payload.summary || {};
+      setSynonymPanels((current) => {
+        const next = { ...current };
+        (Array.isArray(list) ? list : []).forEach((entry) => {
+          const count = Number(summary[entry.term]) || 0;
+          next[entry._id] = {
+            ...(next[entry._id] || {}),
+            hasStored: count > 0,
+            count
+          };
+        });
+        return next;
+      });
+    } catch {
+      /* ignore summary errors */
     }
   };
   const togglePartOfSpeech = (value) => () => {
@@ -539,6 +590,185 @@ export default function App() {
     setReviewResult(null);
   };
 
+  const requestAiAlternatives = async (entry) => {
+    const entryId = entry?._id;
+    const itemText = asText(entry?.term);
+    if (!entryId || !itemText.trim()) return;
+
+    setOpenSynonymId(entryId);
+    setSynonymPanels((current) => ({
+      ...current,
+      [entryId]: {
+        ...current[entryId],
+        status: "loading",
+        error: "",
+        item: itemText,
+        results: current[entryId]?.results || null,
+        visibleSituations: current[entryId]?.visibleSituations || defaultVisibleSituations()
+      }
+    }));
+
+    try {
+      const response = await fetch("/api/entries/ai-alternatives", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: itemText })
+      });
+      const payload = await safeJson(response);
+      if (!response.ok) {
+        throw new Error(payload.error || "KI-Abfrage fehlgeschlagen");
+      }
+
+      const totalCount = countResults(payload.results);
+      setSynonymPanels((current) => ({
+        ...current,
+        [entryId]: {
+          status: "success",
+          error: "",
+          item: payload.item || itemText,
+          results: payload.results || {},
+          updatedAt: new Date().toISOString(),
+          hasStored: totalCount > 0,
+          count: totalCount,
+          visibleSituations: current[entryId]?.visibleSituations || defaultVisibleSituations()
+        }
+      }));
+    } catch (err) {
+      setSynonymPanels((current) => ({
+        ...current,
+        [entryId]: {
+          ...current[entryId],
+          status: "error",
+          error: err.message || "KI-Abfrage fehlgeschlagen"
+        }
+      }));
+    }
+  };
+
+  const loadStoredAlternatives = async (entry) => {
+    const entryId = entry?._id;
+    if (!entryId) return;
+    setSynonymPanels((current) => ({
+      ...current,
+      [entryId]: {
+        ...(current[entryId] || {}),
+        status: "loading",
+        error: "",
+        visibleSituations: current[entryId]?.visibleSituations || defaultVisibleSituations()
+      }
+    }));
+    try {
+      const response = await fetch(`/api/entries/${entryId}/ai-alternatives`);
+      const payload = await safeJson(response);
+      if (!response.ok) {
+        throw new Error(payload.error || "Synonyme konnten nicht geladen werden");
+      }
+      const totalCount = countResults(payload.results);
+      setSynonymPanels((current) => ({
+        ...current,
+        [entryId]: {
+          ...(current[entryId] || {}),
+          status: "success",
+          error: "",
+          item: payload.item || entry.term,
+          results: payload.results || {},
+          hasStored: totalCount > 0,
+          count: totalCount,
+          visibleSituations: current[entryId]?.visibleSituations || defaultVisibleSituations()
+        }
+      }));
+    } catch (err) {
+      setSynonymPanels((current) => ({
+        ...current,
+        [entryId]: {
+          ...(current[entryId] || {}),
+          status: "error",
+          error: err.message || "Synonyme konnten nicht geladen werden"
+        }
+      }));
+    }
+  };
+
+  const toggleSynonymPanel = async (entry) => {
+    const entryId = entry?._id;
+    if (!entryId) return;
+    const nextOpen = openSynonymId === entryId ? null : entryId;
+    setOpenSynonymId(nextOpen);
+    if (nextOpen) {
+      const panel = synonymPanels[entryId];
+      if (!panel?.results && panel?.status !== "loading") {
+        await loadStoredAlternatives(entry);
+      }
+    }
+  };
+
+  const deleteAllAlternatives = async (entry) => {
+    const entryId = entry?._id;
+    if (!entryId) return;
+    setSynonymPanels((current) => ({
+      ...current,
+      [entryId]: {
+        ...(current[entryId] || {}),
+        status: "loading",
+        error: "",
+        visibleSituations: current[entryId]?.visibleSituations || defaultVisibleSituations()
+      }
+    }));
+    try {
+      const response = await fetch(`/api/entries/${entryId}/ai-alternatives`, { method: "DELETE" });
+      const payload = await safeJson(response);
+      if (!response.ok) {
+        throw new Error(payload.error || "Synonyme konnten nicht gelöscht werden");
+      }
+      const totalCount = countResults(payload.results);
+      setSynonymPanels((current) => ({
+        ...current,
+        [entryId]: {
+          ...(current[entryId] || {}),
+          status: "idle",
+          error: "",
+          item: payload.item || entry.term,
+          results: payload.results || {},
+          hasStored: totalCount > 0,
+          count: totalCount,
+          visibleSituations: current[entryId]?.visibleSituations || defaultVisibleSituations()
+        }
+      }));
+    } catch (err) {
+      setSynonymPanels((current) => ({
+        ...current,
+        [entryId]: {
+          ...(current[entryId] || {}),
+          status: "error",
+          error: err.message || "Synonyme konnten nicht gelöscht werden"
+        }
+      }));
+    }
+  };
+
+  const handlePanelClick = (event, entry) => {
+    if (event.target.closest("button")) return;
+    toggleSynonymPanel(entry);
+  };
+
+  const toggleSituationVisibility = (entryId, key) => {
+    setSynonymPanels((current) => {
+      const panel = current[entryId] || {};
+      const currentList = Array.isArray(panel.visibleSituations)
+        ? panel.visibleSituations
+        : defaultVisibleSituations();
+      const has = currentList.includes(key);
+      const next = has ? currentList.filter((item) => item !== key) : [...currentList, key];
+      return {
+        ...current,
+        [entryId]: {
+          ...panel,
+          visibleSituations: next
+        }
+      };
+    });
+  };
+
   const applyLemmaSuggestion = (value) => {
     const suggestion = asText(value).trim();
     if (!suggestion) return;
@@ -767,7 +997,6 @@ export default function App() {
       setAiPassword("");
       setAiStatus("success");
       setAiMessage("KI-Zugang aktiv.");
-      setShowSidebar(true);
     } catch (err) {
       setAiStatus("error");
       setAiMessage(err.message || "Login fehlgeschlagen");
@@ -779,7 +1008,6 @@ export default function App() {
       () => null
     );
     setIsLoggedIn(false);
-    setShowSidebar(false);
   };
 
   return (
@@ -824,22 +1052,57 @@ export default function App() {
           </div>
           <div className="duden-brand-actions">
             {isLoggedIn ? (
-              <button
-                type="button"
-                className="duden-logout"
-                onClick={logoutAi}
+              <>
+                <button
+                  type="button"
+                  className="duden-secondary"
+                  onClick={() => setEditorMode((prev) => !prev)}
+                  aria-pressed={editorMode}
+                  title="Editor-Modus umschalten"
+                >
+                  ✎ Editor-Modus {editorMode ? "an" : "aus"}
+                </button>
+                <button
+                  type="button"
+                  className="duden-logout"
+                  onClick={logoutAi}
+                >
+                  Abmelden
+                </button>
+              </>
+            ) : (
+              <form
+                className="duden-form duden-header-login"
+                onSubmit={loginForAi}
+                ref={loginFormRef}
               >
-                Abmelden
-              </button>
-            ) : !showSidebar ? (
-              <button
-                type="button"
-                className="duden-login-link"
-                onClick={openLoginPanel}
-              >
-                Login
-              </button>
-            ) : null}
+                <div className="duden-form-header">
+                  <h2>Editor freischalten</h2>
+                  <span className="duden-pill">Login</span>
+                </div>
+                <label htmlFor="duden-login-input">
+                  Passwort
+                  <div className="duden-header-login-row">
+                    <input
+                      id="duden-login-input"
+                      type="password"
+                      value={aiPassword}
+                      onChange={(event) => setAiPassword(event.target.value)}
+                      placeholder="Passwort eingeben"
+                      ref={loginInputRef}
+                    />
+                    <button type="submit" className="duden-secondary">
+                      Anmelden
+                    </button>
+                  </div>
+                </label>
+                {aiMessage ? (
+                  <p className={aiStatus === "error" ? "duden-error" : "duden-status"}>
+                    {aiMessage}
+                  </p>
+                ) : null}
+              </form>
+            )}
           </div>
         </header>
         {showHelp ? (
@@ -898,16 +1161,261 @@ export default function App() {
         <main className="duden-page">
 
           <div className="duden-content">
+            {isLoggedIn && editorMode ? (
+              <div className="duden-form-inline">
+                <form id="duden-form" onSubmit={submitEntry} className="duden-form">
+                  <div className="duden-form-header">
+                    <h2>{editingId ? "Eintrag bearbeiten" : "Neuer Eintrag"}</h2>
+                    <span className="duden-pill">
+                      {editingId ? "Editor-Modus" : "Neu"}
+                    </span>
+                  </div>
+                  <label>
+                    Lemma
+                    <div className="duden-input-wrap">
+                      <input
+                        type="text"
+                        value={form.term}
+                        onChange={updateForm("term")}
+                        onFocus={rememberFocus("term")}
+                        placeholder="Wort oder Wendung"
+                        required
+                        ref={termRef}
+                      />
+                      {form.term ? (
+                        <button
+                          type="button"
+                          className="duden-clear"
+                          onClick={resetAllFields}
+                          aria-label="Felder leeren"
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                    {(() => {
+                      const suggestions = reviewResult?.term?.suggestions || [];
+                      const corrected = reviewResult?.term?.corrected;
+                      const items =
+                        suggestions.length > 0
+                          ? suggestions
+                          : corrected
+                            ? [{ from: form.term, to: corrected }]
+                            : [];
+                      if (items.length === 0) return null;
+                      return (
+                        <div className="duden-lowercase-hint">
+                          <p className="duden-status">
+                            Meintest du:{" "}
+                            {items
+                              .map((item) => item.to || item.suggestion || item.corrected)
+                              .filter(Boolean)
+                              .join(", ")}
+                            ?
+                          </p>
+                          {items.map((item, index) => {
+                            const target = item.to || item.suggestion || item.corrected;
+                            if (!target) return null;
+                            return (
+                              <button
+                                key={`term-s-${index}`}
+                                type="button"
+                                className="duden-secondary"
+                                onClick={() => applyReviewSuggestion("term", target)}
+                              >
+                                {(item.from || item.wrong || "Eingabe")} → {target}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                    {lemmaSuggestions.length > 0 ? (
+                      <div className="duden-lemma-suggestions">
+                        <p className="duden-status">Lemma-Vorschläge:</p>
+                        <div className="duden-pos-pills" role="group" aria-label="Lemma-Vorschläge">
+                          {lemmaSuggestions.map((item, index) => (
+                            <button
+                              key={`lemma-s-${index}`}
+                              type="button"
+                              className="duden-pos-pill"
+                              onClick={() => applyLemmaSuggestion(item)}
+                            >
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </label>
+                  <div className="duden-inline">
+                    <label className="duden-pos">
+                      <span>Wortart</span>
+                      <div className="duden-pos-pills" role="group" aria-label="Wortarten">
+                        {PART_OPTIONS.map((opt) => {
+                          const active = isPartActive(opt.value);
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              className={`duden-pos-pill${active ? " is-active" : ""}`}
+                              onClick={togglePartOfSpeech(opt.value)}
+                              aria-pressed={active}
+                            >
+                              {opt.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </label>
+                  </div>
+                  {asArray(form.partOfSpeech).includes("noun") ? (
+                    <label className="duden-article">
+                      Artikel
+                      <select value={form.article} onChange={updateArticle} required>
+                        <option value="">Bitte wählen</option>
+                        <option value="der">der</option>
+                        <option value="die">die</option>
+                        <option value="das">das</option>
+                      </select>
+                      {(() => {
+                        const suggestedArticle = asText(reviewResult?.term?.article)
+                          .trim()
+                          .toLowerCase();
+                        const currentArticle = asText(form.article).trim().toLowerCase();
+                        if (!suggestedArticle || suggestedArticle === currentArticle) return null;
+                        return (
+                          <p className="duden-status">
+                            Vorschlag: {suggestedArticle.toUpperCase()}
+                          </p>
+                        );
+                      })()}
+                    </label>
+                  ) : null}
+                  <label>
+                    Bedeutung
+                    <textarea
+                      value={form.definition}
+                      onChange={updateForm("definition")}
+                      onFocus={rememberFocus("definition")}
+                      placeholder="Beschreibung oder Bedeutung"
+                      required
+                      rows="4"
+                      ref={definitionRef}
+                    />
+                    {lowercaseWarnings.definition.length > 0 ? (
+                      <div className="duden-lowercase-hint">
+                        <p className="duden-status">
+                          Hinweis: {lowercaseWarnings.definition.join(", ")} schreibt man klein.
+                        </p>
+                        <button
+                          type="button"
+                          className="duden-secondary"
+                          onClick={() => applyLowercaseSuggestionFor("definition")}
+                        >
+                          Korrektur anwenden
+                        </button>
+                      </div>
+                    ) : null}
+                  </label>
+                  <label>
+                    Gebrauch (optional)
+                    <textarea
+                      value={form.example}
+                      onChange={updateForm("example")}
+                      onFocus={rememberFocus("example")}
+                      placeholder="Beispiel oder Kontext"
+                      rows="3"
+                      ref={exampleRef}
+                    />
+                    {lowercaseWarnings.example.length > 0 ? (
+                      <div className="duden-lowercase-hint">
+                        <p className="duden-status">
+                          Hinweis: {lowercaseWarnings.example.join(", ")} schreibt man klein.
+                        </p>
+                        <button
+                          type="button"
+                          className="duden-secondary"
+                          onClick={() => applyLowercaseSuggestionFor("example")}
+                        >
+                          Korrektur anwenden
+                        </button>
+                      </div>
+                    ) : null}
+                  </label>
+                  <label>
+                    Synonyme / Alternativen (optional)
+                    <textarea
+                      value={form.synonyms}
+                      onChange={updateForm("synonyms")}
+                      onFocus={rememberFocus("synonyms")}
+                      placeholder="Alternative Formulierungen oder Synonyme"
+                      rows="3"
+                      ref={synonymsRef}
+                    />
+                    {lowercaseWarnings.synonyms.length > 0 ? (
+                      <div className="duden-lowercase-hint">
+                        <p className="duden-status">
+                          Hinweis: {lowercaseWarnings.synonyms.join(", ")} schreibt man klein.
+                        </p>
+                        <button
+                          type="button"
+                          className="duden-secondary"
+                          onClick={() => applyLowercaseSuggestionFor("synonyms")}
+                        >
+                          Korrektur anwenden
+                        </button>
+                      </div>
+                    ) : null}
+                  </label>
+                  <div className="duden-ai">
+                    <button
+                      type="button"
+                      className="duden-secondary"
+                      onClick={completeWithAi}
+                      disabled={aiStatus === "loading"}
+                    >
+                      {aiButtonLabel()}
+                    </button>
+                    {aiMessage ? (
+                      <p className={aiStatus === "error" ? "duden-error" : "duden-status"}>
+                        {aiMessage}
+                      </p>
+                    ) : null}
+                  </div>
+                  <button type="submit" className="duden-save" disabled={status === "saving"}>
+                    {status === "saving" ? "Speichern ..." : "Eintrag speichern"}
+                  </button>
+                  {editingId && isLoggedIn ? (
+                    <button type="button" className="duden-secondary" onClick={cancelEdit}>
+                      Bearbeitung abbrechen
+                    </button>
+                  ) : null}
+                </form>
+              </div>
+            ) : null}
             <section className="duden-entries">
               <div className="duden-search">
                 <label htmlFor="search">Suche</label>
-                <input
-                  id="search"
-                  type="search"
-                  placeholder="Eintrag suchen"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
+                <div className="duden-input-wrap">
+                  <input
+                    id="search"
+                    type="search"
+                    placeholder="Eintrag suchen"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
+                  {query ? (
+                    <button
+                      type="button"
+                      className="duden-clear"
+                      onClick={() => setQuery("")}
+                      aria-label="Suche löschen"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
                 <span className="duden-count">{filteredEntries.length} Einträge</span>
               </div>
 
@@ -928,7 +1436,18 @@ export default function App() {
                       key={entry._id}
                       style={{ animationDelay: `${index * 70}ms` }}
                     >
-                      <h3>{displayTerm(entry)}</h3>
+                      <div className="duden-entry-head">
+                        <h3>{displayTerm(entry)}</h3>
+                        <div className="duden-entry-icons">
+                          <button
+                            type="button"
+                            className="duden-card duden-card--icon"
+                            onClick={() => downloadCard(entry)}
+                            title="Lernkarte herunterladen"
+                            aria-label="Lernkarte herunterladen"
+                          />
+                        </div>
+                      </div>
                       <p className="duden-entry-type">
                         Eintrag · Persönliche Notiz
                         {partLabel(entry) ? ` · ${partLabel(entry)}` : ""}
@@ -949,16 +1468,117 @@ export default function App() {
                           <p>{entry.synonyms}</p>
                         </div>
                       ) : null}
+                      {(() => {
+                        const panel = synonymPanels[entry._id] || { status: "idle", count: 0 };
+                        const isOpen = openSynonymId === entry._id;
+                        const visibleSituations = Array.isArray(panel.visibleSituations)
+                          ? panel.visibleSituations
+                          : defaultVisibleSituations();
+                        return (
+                          <div
+                            className="duden-ai-panel"
+                            onClick={(event) => handlePanelClick(event, entry)}
+                          >
+                            <div className="duden-ai-panel-top">
+                              <button
+                                type="button"
+                                className="duden-ai-toggle"
+                                onClick={() => toggleSynonymPanel(entry)}
+                                aria-expanded={isOpen}
+                              >
+                                <span className="duden-ai-mark" aria-hidden="true" />
+                                <span>
+                                  Situative Synonyme {panel?.count ? `(${panel.count})` : ""}
+                                </span>
+                                <span aria-hidden="true">{isOpen ? "▲" : "▼"}</span>
+                                {isLoggedIn && editorMode ? (
+                                  <div className="duden-ai-panel-actions">
+                                    <button
+                                      type="button"
+                                      className="duden-icon-btn"
+                                      onClick={() => requestAiAlternatives(entry)}
+                                      disabled={panel?.status === "loading"}
+                                      title="KI erneut abfragen"
+                                      aria-label="KI erneut abfragen"
+                                    >
+                                      ★
+                                    </button>
+                                    {panel?.count > 0 ? (
+                                      <button
+                                        type="button"
+                                        className="duden-icon-btn duden-danger"
+                                        onClick={() => deleteAllAlternatives(entry)}
+                                        disabled={panel?.status === "loading"}
+                                        title="Alle gespeicherten Synonyme löschen"
+                                        aria-label="Alle gespeicherten Synonyme löschen"
+                                      >
+                                        🗑
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                              </button>
+                            </div>
+                            {panel?.status === "error" ? (
+                              <p className="duden-error">{panel?.error}</p>
+                            ) : null}
+                            {isOpen ? (
+                              <div className="duden-ai-panel-body">
+                                {panel?.status === "loading" ? (
+                                  <p className="duden-status">Lade Synonyme ...</p>
+                                ) : (
+                                  <div className="duden-ai-situations">
+                                    {AI_SITUATION_META.filter((meta) =>
+                                      visibleSituations.includes(meta.key)
+                                    ).map((meta) => (
+                                      <div className="duden-ai-situation" key={meta.key}>
+                                        <div className="duden-ai-situation-head">
+                                          <span className="duden-ai-situation-icon">{meta.icon}</span>
+                                          <span className="duden-ai-situation-label">{meta.label}</span>
+                                        </div>
+                                        <div className="duden-ai-situation-body">
+                                          {(panel?.results?.[meta.key] || []).length === 0 ? (
+                                            <span className="duden-status">Noch nichts gespeichert.</span>
+                                          ) : (
+                                            (panel?.results?.[meta.key] || []).map((item, idx) => (
+                                              <span className="duden-ai-chip" key={`${meta.key}-${idx}`}>
+                                                {item}
+                                              </span>
+                                            ))
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="duden-ai-filters">
+                                  <span className="duden-status">Situationen filtern:</span>
+                                  <div className="duden-pos-pills" role="group" aria-label="Situationen">
+                                    {AI_SITUATION_META.map((meta) => {
+                                      const active = visibleSituations.includes(meta.key);
+                                      return (
+                                        <button
+                                          key={`filter-${meta.key}`}
+                                          type="button"
+                                          className={`duden-pos-pill${active ? " is-active" : ""}`}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            toggleSituationVisibility(entry._id, meta.key);
+                                          }}
+                                        >
+                                          {meta.icon} {meta.label.split(" · ")[0]}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                       <div className="duden-entry-actions">
-                        <button
-                          type="button"
-                          className="duden-card"
-                          onClick={() => downloadCard(entry)}
-                          title="Lernkarte herunterladen"
-                        >
-                          Karte
-                        </button>
-                        {isLoggedIn ? (
+                        {isLoggedIn && editorMode ? (
                           <>
                             <button
                               type="button"
@@ -983,289 +1603,33 @@ export default function App() {
               </div>
             </section>
 
-            {(showSidebar || isLoggedIn) ? (
-              <aside className="duden-side">
-                {isLoggedIn ? (
-                  <form id="duden-form" onSubmit={submitEntry} className="duden-form">
-                    <div className="duden-form-header">
-                      <h2>{editingId ? "Eintrag bearbeiten" : "Neuer Eintrag"}</h2>
-                      {editingId ? <span className="duden-pill">Editor-Modus</span> : null}
-                    </div>
-                    <label>
-                      Lemma
-                      <div className="duden-input-wrap">
-                        <input
-                          type="text"
-                          value={form.term}
-                          onChange={updateForm("term")}
-                          onFocus={rememberFocus("term")}
-                          placeholder="Wort oder Wendung"
-                          required
-                          ref={termRef}
-                        />
-                        {form.term ? (
-                          <button
-                            type="button"
-                            className="duden-clear"
-                            onClick={resetAllFields}
-                            aria-label="Felder leeren"
-                          >
-                            ×
-                          </button>
-                        ) : null}
-                      </div>
-                      {(() => {
-                        const suggestions = reviewResult?.term?.suggestions || [];
-                        const corrected = reviewResult?.term?.corrected;
-                        const items =
-                          suggestions.length > 0
-                            ? suggestions
-                            : corrected
-                              ? [{ from: form.term, to: corrected }]
-                              : [];
-                        if (items.length === 0) return null;
-                        return (
-                          <div className="duden-lowercase-hint">
-                            <p className="duden-status">
-                              Meintest du:{" "}
-                              {items
-                                .map((item) => item.to || item.suggestion || item.corrected)
-                                .filter(Boolean)
-                                .join(", ")}
-                              ?
-                            </p>
-                            {items.map((item, index) => {
-                              const target = item.to || item.suggestion || item.corrected;
-                              if (!target) return null;
-                              return (
-                                <button
-                                  key={`term-s-${index}`}
-                                  type="button"
-                                  className="duden-secondary"
-                                  onClick={() => applyReviewSuggestion("term", target)}
-                                >
-                                  {(item.from || item.wrong || "Eingabe")} → {target}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                      {lemmaSuggestions.length > 0 ? (
-                        <div className="duden-lemma-suggestions">
-                          <p className="duden-status">Lemma-Vorschläge:</p>
-                          <div className="duden-pos-pills" role="group" aria-label="Lemma-Vorschläge">
-                            {lemmaSuggestions.map((item, index) => (
-                              <button
-                                key={`lemma-s-${index}`}
-                                type="button"
-                                className="duden-pos-pill"
-                                onClick={() => applyLemmaSuggestion(item)}
-                              >
-                                {item}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </label>
-                    <div className="duden-inline">
-                      <label className="duden-pos">
-                        <span>Wortart</span>
-                        <div className="duden-pos-pills" role="group" aria-label="Wortarten">
-                          {PART_OPTIONS.map((opt) => {
-                            const active = isPartActive(opt.value);
-                            return (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                className={`duden-pos-pill${active ? " is-active" : ""}`}
-                                onClick={togglePartOfSpeech(opt.value)}
-                                aria-pressed={active}
-                              >
-                                {opt.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </label>
-                      {asArray(form.partOfSpeech).includes("noun") ? (
-                        <label>
-                          Artikel
-                          <select value={form.article} onChange={updateArticle} required>
-                            <option value="">Bitte wählen</option>
-                            <option value="der">der</option>
-                            <option value="die">die</option>
-                            <option value="das">das</option>
-                          </select>
-                          {(() => {
-                            const suggestedArticle = asText(reviewResult?.term?.article)
-                              .trim()
-                              .toLowerCase();
-                            const currentArticle = asText(form.article).trim().toLowerCase();
-                            if (!suggestedArticle || suggestedArticle === currentArticle) return null;
-                            return (
-                              <p className="duden-status">
-                                Vorschlag: {suggestedArticle.toUpperCase()}
-                              </p>
-                            );
-                          })()}
-                        </label>
-                      ) : null}
-                    </div>
-                    <label>
-                      Bedeutung
-                      <textarea
-                        value={form.definition}
-                        onChange={updateForm("definition")}
-                        onFocus={rememberFocus("definition")}
-                        placeholder="Beschreibung oder Bedeutung"
-                        required
-                        rows="4"
-                        ref={definitionRef}
-                      />
-                      {lowercaseWarnings.definition.length > 0 ? (
-                        <div className="duden-lowercase-hint">
-                          <p className="duden-status">
-                            Hinweis: {lowercaseWarnings.definition.join(", ")} schreibt man klein.
-                          </p>
-                          <button
-                            type="button"
-                            className="duden-secondary"
-                            onClick={() => applyLowercaseSuggestionFor("definition")}
-                          >
-                            Korrektur anwenden
-                          </button>
-                        </div>
-                      ) : null}
-                    </label>
-                    <label>
-                      Gebrauch (optional)
-                      <textarea
-                        value={form.example}
-                        onChange={updateForm("example")}
-                        onFocus={rememberFocus("example")}
-                        placeholder="Beispiel oder Kontext"
-                        rows="3"
-                        ref={exampleRef}
-                      />
-                      {lowercaseWarnings.example.length > 0 ? (
-                        <div className="duden-lowercase-hint">
-                          <p className="duden-status">
-                            Hinweis: {lowercaseWarnings.example.join(", ")} schreibt man klein.
-                          </p>
-                          <button
-                            type="button"
-                            className="duden-secondary"
-                            onClick={() => applyLowercaseSuggestionFor("example")}
-                          >
-                            Korrektur anwenden
-                          </button>
-                        </div>
-                      ) : null}
-                    </label>
-                    <label>
-                      Synonyme / Alternativen (optional)
-                      <textarea
-                        value={form.synonyms}
-                        onChange={updateForm("synonyms")}
-                        onFocus={rememberFocus("synonyms")}
-                        placeholder="Alternative Formulierungen oder Synonyme"
-                        rows="3"
-                        ref={synonymsRef}
-                      />
-                      {lowercaseWarnings.synonyms.length > 0 ? (
-                        <div className="duden-lowercase-hint">
-                          <p className="duden-status">
-                            Hinweis: {lowercaseWarnings.synonyms.join(", ")} schreibt man klein.
-                          </p>
-                          <button
-                            type="button"
-                            className="duden-secondary"
-                            onClick={() => applyLowercaseSuggestionFor("synonyms")}
-                          >
-                            Korrektur anwenden
-                          </button>
-                        </div>
-                      ) : null}
-                    </label>
-                    <div className="duden-ai">
-                      <button
-                        type="button"
-                        className="duden-secondary"
-                        onClick={completeWithAi}
-                        disabled={aiStatus === "loading"}
-                      >
-                        {aiButtonLabel()}
-                      </button>
-                      {aiMessage ? (
-                        <p className={aiStatus === "error" ? "duden-error" : "duden-status"}>
-                          {aiMessage}
-                        </p>
-                      ) : null}
-                    </div>
-                    <button type="submit" className="duden-save" disabled={status === "saving"}>
-                      {status === "saving" ? "Speichern ..." : "Eintrag speichern"}
-                    </button>
-                    {editingId && isLoggedIn ? (
-                      <button type="button" className="duden-secondary" onClick={cancelEdit}>
-                        Bearbeitung abbrechen
-                      </button>
-                    ) : null}
-                  </form>
-                ) : (
-                  <form
-                    className="duden-form duden-login"
-                    onSubmit={loginForAi}
-                    ref={loginFormRef}
-                  >
-                    <div className="duden-form-header">
-                      <h2>Editor freischalten</h2>
-                      <span className="duden-pill">Login</span>
-                    </div>
-                    <div className="duden-ai-login">
-                      <label>
-                        Login
-                        <input
-                          type="password"
-                          value={aiPassword}
-                          onChange={(event) => setAiPassword(event.target.value)}
-                          placeholder="Passwort eingeben"
-                          ref={loginInputRef}
-                        />
-                      </label>
-                    </div>
-                    <div className="duden-ai-actions">
-                      <button type="submit" className="duden-secondary">
-                        Anmelden
-                      </button>
-                    </div>
-                    {aiMessage ? (
-                      <p className={aiStatus === "error" ? "duden-error" : "duden-status"}>
-                        {aiMessage}
-                      </p>
-                    ) : null}
-                  </form>
-                )}
-
-              <div className="duden-note">
-                Sprachwissenschaftliche Anmerkung: Die hier aufgeführten Ausdrücke
-                gelten als korrekt, präzise und gepflegt. Im mündlichen Alltag
-                können sie jedoch als überformell oder unbeabsichtigt ironisch
-                wahrgenommen werden, insbesondere bei Sprecher:innen unter 35 Jahren.
-              </div>
-
-            </aside>
-            ) : null}
+            <div className="duden-note">
+              Sprachwissenschaftliche Anmerkung: Die hier aufgeführten Ausdrücke
+              gelten als korrekt, präzise und gepflegt. Im mündlichen Alltag
+              können sie jedoch als überformell oder unbeabsichtigt ironisch
+              wahrgenommen werden, insbesondere bei Sprecher:innen unter 35 Jahren.
+            </div>
           </div>
           <footer className="duden-footer">
             <img
               src={testimonialImage}
               alt="Testimonial"
-              className="duden-footer-testimonial"
-              loading="lazy"
+                            className="duden-footer-testimonial"
+                            loading="lazy"
+                            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                window.scrollTo({ top: 0, behavior: "smooth" });
+                              }
+                            }}
             />
             <div className="duden-footer-actions">
+              <button type="button" className="duden-link-button" onClick={openImprint}>
+                Impressum
+              </button>
               <button type="button" className="duden-link-button" onClick={openHelp}>
                 Help
               </button>
@@ -1277,6 +1641,86 @@ export default function App() {
           </footer>
         </main>
       </div>
+      <p className="duden-underframe-disclaimer">
+        <strong>Kein offizielles Angebot von Cornelsen oder DUDEN.</strong> Künstlerisches Privatprojekt.
+      </p>
+      {showImprint ? (
+        <div className="duden-overlay" role="dialog" aria-modal="true" onClick={closeImprint}>
+          <div className="duden-help duden-imprint" onClick={(event) => event.stopPropagation()}>
+            <div className="duden-help-header">
+              <h2>Impressum</h2>
+              <button type="button" className="duden-secondary" onClick={closeImprint}>
+                Schließen
+              </button>
+            </div>
+            <div className="duden-help-body">
+              <div className="duden-help-section">
+                <h3>Angaben gemäß § 5 TMG</h3>
+                <p className="duden-help-text">
+                  Dieses Projekt ist ein privates, nicht-kommerzielles Kunst- und Sprachprojekt zur persönlichen Nutzung.
+                  Es dient der experimentellen und spielerischen Auseinandersetzung mit Sprache, Sprachgebrauch und situativen Sprachregistern.
+                </p>
+              </div>
+              <div className="duden-help-section">
+                <h3>Projektbetreiber</h3>
+                <p className="duden-help-text">
+                  Akin Tekercibasi<br />
+                  Frankenfelder Weg 5<br />
+                  64579 Gernsheim-Allmendfeld<br />
+                  <a className="duden-link-button" href="https://tekercibasi.de" target="_blank" rel="noreferrer">tekercibasi.de</a><br />
+                  <a className="duden-link-button" href="mailto:at@tekeribasi.de">at@tekeribasi.de</a>
+                </p>
+              </div>
+              <div className="duden-help-section">
+                <h3>Projektcharakter &amp; Haftungsausschluss</h3>
+                <p className="duden-help-text">
+                  Bei dieser Website handelt es sich nicht um ein Wörterbuch, kein Referenzwerk und keine Sprachberatung.
+                  Alle Inhalte – insbesondere Beispiele, Alternativen, Redewendungen und KI-generierte Texte – sind künstlerisch, subjektiv und experimentell.
+                  Es wird keine Gewähr für Richtigkeit, Vollständigkeit oder Angemessenheit der Inhalte übernommen. Die Nutzung erfolgt ausschließlich auf eigene Verantwortung.
+                </p>
+              </div>
+              <div className="duden-help-section">
+                <h3>Abgrenzung zu Cornelsen &amp; DUDEN</h3>
+                <p className="duden-help-text">
+                  Dieses Projekt steht in keinerlei Verbindung zur Cornelsen Verlag GmbH oder zur Bibliographisches Institut GmbH (DUDEN).
+                  Nichts auf dieser Website stammt von Cornelsen oder DUDEN; es besteht keine Kooperation, Partnerschaft, Lizenzierung oder Beauftragung.
+                  Der Name „Duden“ wird ausschließlich im Rahmen eines künstlerischen, parodistischen Konzepts verwendet.
+                  Es werden keine Wortherleitungen oder Inhalte von DUDEN übernommen. Inhalte stammen ausschließlich von Nutzer:innen oder sind OpenAI-generierte Texte.
+                </p>
+              </div>
+              <div className="duden-help-section">
+                <h3>Gestaltung</h3>
+                <p className="duden-help-text">
+                  Logo, Layout und gestalterische Elemente sind künstlerisch frei interpretiert und bewusst abgewandelt.
+                  Es handelt sich nicht um das originale DUDEN-Logo oder Corporate Design; Ähnlichkeiten dienen allein der satirischen bzw. künstlerischen Referenz.
+                </p>
+              </div>
+              <div className="duden-help-section">
+                <h3>Nutzung &amp; Weitergabe</h3>
+                <p className="duden-help-text">
+                  Dieses Projekt ist nicht für die kommerzielle Nutzung bestimmt.
+                  Eine Weiterverwendung über den privaten Rahmen hinaus ist ohne vorherige Zustimmung nicht gestattet.
+                  Teile der Inhalte werden mithilfe automatisierter Sprachmodelle erzeugt und stellen keine objektiven Aussagen dar.
+                </p>
+              </div>
+              <div className="duden-help-section">
+                <h3>Open Source</h3>
+                <p className="duden-help-text">
+                  Der Code ist open-source verfügbar.
+                </p>
+                <a
+                  className="duden-link-button"
+                  href="https://github.com/tekercibasi/warefs-duden"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  GitHub-Repo öffnen
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
