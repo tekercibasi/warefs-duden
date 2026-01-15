@@ -1357,16 +1357,21 @@ export default function App() {
                         </div>
                       ) : null}
                       {(() => {
-                        const panel = synonymPanels[entry._id] || { status: "idle", count: 0 };
-                        const isOpen = openSynonymId === entry._id;
-                        const visibleSituations = Array.isArray(panel.visibleSituations)
-                          ? panel.visibleSituations
-                          : defaultVisibleSituations();
-                        return (
-                          <div
-                            className="duden-ai-panel"
-                            onClick={(event) => handlePanelClick(event, entry)}
-                          >
+                    const panel = synonymPanels[entry._id] || { status: "idle", count: 0 };
+                    const isOpen = openSynonymId === entry._id;
+                    const visibleSituations = Array.isArray(panel.visibleSituations)
+                      ? panel.visibleSituations
+                      : defaultVisibleSituations();
+                    const synStatusMessage =
+                      error &&
+                      (error.includes("situative Synonyme") || error.includes("Synonyme passen"))
+                        ? error
+                        : "";
+                    return (
+                      <div
+                        className="duden-ai-panel"
+                        onClick={(event) => handlePanelClick(event, entry)}
+                      >
                             <div className="duden-ai-panel-top">
                               <button
                                 type="button"
@@ -1407,6 +1412,17 @@ export default function App() {
                                 </div>
                               ) : null}
                             </div>
+                            {synStatusMessage ? (
+                              <p
+                                className={
+                                  synStatusMessage.includes("passen jetzt")
+                                    ? "duden-status"
+                                    : "duden-error"
+                                }
+                              >
+                                {synStatusMessage}
+                              </p>
+                            ) : null}
                             {panel?.status === "error" ? (
                               <p className="duden-error">{panel?.error}</p>
                             ) : null}
