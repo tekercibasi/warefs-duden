@@ -23,6 +23,9 @@ Small personal dictionary app with a React frontend and MongoDB-backed API. The 
 
 SSL is handled in the NPM UI as requested. Repo: `https://github.com/tekercibasi/warefs-duden`.
 
+## Screenshot
+![Frontend-Vorschau](web/src/img/frontend.png)
+
 ## How it works (Kurzfassung)
 - **Login:** `ADMIN_PASSWORD` schützt KI, Editieren und Löschen.
 - **Rechtschreibung/Lemmatisierung:** GPT‑4o liefert `{corrected, suggestions, lemma, partOfSpeech, article}`. Wortarten (auch mehrfach möglich): noun, verb, adjective, adverb, interjection, particle, conjunction, preposition, phrase. Vorschläge sind optional; KI-Flow wird nicht blockiert.
