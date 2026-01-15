@@ -299,6 +299,20 @@ export default function App() {
       return changed ? next : current;
     });
   };
+  const applyCapitalizationFromReview = (reviewData) => {
+    const termReview = reviewData?.term;
+    if (!termReview) return;
+    const termSuggestion = asText(termReview.corrected).trim();
+    const hasNoun = asArray(termReview.partOfSpeech)
+      .map((p) => asText(p).trim().toLowerCase())
+      .includes("noun");
+    if (!hasNoun || !termSuggestion) return;
+    setForm((current) => {
+      const currentTerm = asText(current.term);
+      if (currentTerm === termSuggestion) return current;
+      return { ...current, term: termSuggestion };
+    });
+  };
   const rememberFocus = (field) => () => {
     lastFocusedField.current = field;
     setFocusedFieldState(field);
@@ -658,6 +672,7 @@ export default function App() {
       if (focusedField === "term" && reviewFieldValue) {
         const reviewData = await reviewFocusedField(focusedField, reviewFieldValue);
         applyMorphologyFromReview(reviewData);
+        applyCapitalizationFromReview(reviewData);
       }
 
       const normalizedPos = asArray(form.partOfSpeech)

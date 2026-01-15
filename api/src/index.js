@@ -241,6 +241,7 @@ app.post("/api/entries/spellcheck", async (req, res) => {
             "suggestions ist ein Array von Objekten { from, to, reason }.",
             "partOfSpeech: Array mit null bis n Einträgen aus: noun, verb, adjective, adverb, interjection, particle, conjunction, preposition, phrase.",
             "article: Wenn partOfSpeech ein Nomen enthält, MUSS der beste Artikel (der/die/das) gesetzt werden; sonst null.",
+            "Großschreibung: Wenn partOfSpeech ein Nomen enthält, setze corrected auf die großgeschriebene Form des Lemmas, falls es klein geschrieben wurde.",
             "Sprache ist immer Deutsch; keine Halluzinationen hinzufügen, Sinn nicht verändern."
           ].join(" ")
         },
@@ -268,6 +269,7 @@ app.post("/api/entries/spellcheck", async (req, res) => {
         const value = parsed[field];
         if (value && typeof value === "object") {
           const normalizedPos = normalizePartOfSpeech(value.partOfSpeech || value.pos);
+          const original = body[field];
           result[field] = {
             corrected:
               typeof value.corrected === "string" && value.corrected.trim()
@@ -282,6 +284,24 @@ app.post("/api/entries/spellcheck", async (req, res) => {
                 ? value.article.trim().toLowerCase()
                 : null
           };
+
+          if (field === "term" && result[field].partOfSpeech.includes("noun")) {
+            const originalTerm = typeof original === "string" ? original : "";
+            const base = result[field].corrected || originalTerm;
+            const capitalized = capitalizeFirst(base);
+            if (capitalized && capitalized !== base) {
+              result[field].corrected = capitalized;
+              result[field].suggestions =
+                result[field].suggestions && Array.isArray(result[field].suggestions)
+                  ? result[field].suggestions
+                  : [];
+              result[field].suggestions.push({
+                from: originalTerm || base,
+                to: capitalized,
+                reason: "Großschreibung (Nomen)"
+              });
+            }
+          }
         } else {
           result[field] = { corrected: null, suggestions: [], partOfSpeech: [], article: null, lemma: null };
         }
@@ -314,6 +334,12 @@ const normalizePartOfSpeech = (value) => {
     .map((item) => String(item).toLowerCase().trim())
     .filter((item) => allowedPos.includes(item));
   return Array.from(new Set(normalized));
+};
+
+const capitalizeFirst = (value) => {
+  if (!value || typeof value !== "string") return value;
+  if (value.length === 0) return value;
+  return `${value[0].toUpperCase()}${value.slice(1)}`;
 };
 
 const normalizeArticle = (value) => {
