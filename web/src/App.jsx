@@ -22,7 +22,6 @@ const capitalizeFirst = (value) => {
   if (value.length === 0) return value;
   return `${value[0].toUpperCase()}${value.slice(1)}`;
 };
-const LOWERCASE_HINTS = ["tatsächlich"];
 const PART_LABELS = {
   noun: "Nomen",
   verb: "Verb",
@@ -60,35 +59,8 @@ const displayTerm = (entry) => {
   return term;
 };
 
-const findLowercaseIssues = (text) => {
-  if (!text) return [];
-  const issues = new Set();
-  LOWERCASE_HINTS.forEach((word) => {
-    const pattern = new RegExp(`\\b${word[0].toUpperCase()}${word.slice(1)}\\b`, "g");
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const idx = match.index;
-      // Skip if at start or directly after sentence delimiters (valid Großschreibung)
-      if (idx === 0) continue;
-      const prev = text.slice(0, idx).trimEnd();
-      const lastChar = prev.slice(-1);
-      if ([".", "!", "?", ";", ":"].includes(lastChar)) continue;
-      issues.add(word);
-      break;
-    }
-  });
-  return Array.from(issues);
-};
-
-const applyLowercaseFixes = (text) => {
-  if (!text) return "";
-  let fixed = text;
-  LOWERCASE_HINTS.forEach((word) => {
-    const pattern = new RegExp(`\\b${word[0].toUpperCase()}${word.slice(1)}\\b`, "g");
-    fixed = fixed.replace(pattern, word);
-  });
-  return fixed;
-};
+const findLowercaseIssues = () => [];
+const applyLowercaseFixes = (text) => text || "";
 
 const sanitizeFilename = (value) => {
   if (!value) return "karte";
