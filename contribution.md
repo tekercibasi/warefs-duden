@@ -1,6 +1,6 @@
 # Contribution Guide
 
-Danke, dass du zu **duden.allmendina.de** beitragen möchtest! Dieses Projekt ist ein kleines Wörterbuch-Frontend (React/Vite) mit Express/MongoDB-API. KI ergänzt fehlende Felder, die Rechtschreibung wird lokal geprüft.
+Danke, dass du zu **warefs-duden.de** beitragen möchtest! Dieses Projekt ist ein kleines Wörterbuch-Frontend (React/Vite) mit Express/MongoDB-API. KI ergänzt fehlende Felder, die Rechtschreibung wird lokal geprüft.
 
 ## Überblick & Architektur
 - **Frontend:** React (Vite), Port 80. UI enthält einen Help-Overlay (Footer-Link), der Nutzer:innen den Ablauf erklärt.
