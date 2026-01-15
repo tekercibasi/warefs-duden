@@ -1624,12 +1624,6 @@ export default function App() {
                 </form>
               </aside>
             ) : null}
-<div className="duden-note">
-              Sprachwissenschaftliche Anmerkung: Die hier aufgeführten Ausdrücke
-              gelten als korrekt, präzise und gepflegt. Im mündlichen Alltag
-              können sie jedoch als überformell oder unbeabsichtigt ironisch
-              wahrgenommen werden, insbesondere bei Sprecher:innen unter 35 Jahren.
-            </div>
           </div>
           <footer className="duden-footer">
             <img
